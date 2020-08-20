@@ -1,0 +1,94 @@
+/* Copyright (C) 2020, HENSOLDT Cyber GmbH */
+
+/**
+ * @file
+ * @brief   Driver for the Secure Digital Host Controller
+ */
+
+/** @cond SKIP_IMPORTS */
+import <if_OS_Storage.camkes>;
+/** @endcond */
+
+#include "plat_defaults.h"
+
+//------------------------------------------------------------------------------
+// Component
+
+#define DECLARE_COMPONENT_SDHC_HW(_type_hw_) \
+    \
+    component _type_hw_ { \
+        hardware; \
+        \
+        dataport  Buf   regBase; \
+        emits     IRQ   irq; \
+    }
+
+
+#define DECLARE_COMPONENT_SDHC_DRV(_name_) \
+    component _name_ { \
+        dataport  Buf               regBase; \
+        consumes  IRQ               irq; \
+        has       mutex             clientMux; \
+        \
+        provides  if_OS_Storage     storage_rpc; \
+        dataport  Buf               storage_port; \
+        \
+        attribute int               peripheral_idx; \
+    }
+
+
+//------------------------------------------------------------------------------
+// Instance Connection
+
+#define DECLARE_AND_CONNECT_INSTANCE_SDHC_DRV_HW( \
+    _type_hw_, \
+    _inst_hw_, \
+    _type_drv_, \
+    _inst_drv_) \
+    \
+    component   _type_hw_   _inst_hw_; \
+    component   _type_drv_  _inst_drv_; \
+    \
+    connection  seL4HardwareMMIO       _inst_drv_ ## _inst_hw_ ## _mmio( \
+                from _inst_drv_.regBase, \
+                to   _inst_hw_.regBase); \
+    \
+    connection  seL4HardwareInterrupt  _inst_drv_ ## _inst_hw_ ## _irq( \
+                from _inst_hw_.irq, \
+                to   _inst_drv_.irq);
+
+//------------------------------------------------------------------------------
+// Instance Configuration
+
+#define CONFIGURE_INSTANCE_SDHC_HW( \
+            _inst_hw_, \
+            _inst_, \
+            _idx_) \
+    \
+    _inst_hw_.regBase_paddr  = SDHC ## _idx_ ## _PADDR; \
+    _inst_hw_.regBase_size   = SDHC ## _idx_ ## _SIZE; \
+    _inst_hw_.irq_irq_number = SDHC ## _idx_ ## _IRQ; \
+    \
+    _inst_.peripheral_idx    = _idx_; \
+
+
+//------------------------------------------------------------------------------
+// convenience macros, since SDHC = Driver + HW
+
+#define DECLARE_COMPONENT_SDHC(_type_) \
+            DECLARE_COMPONENT_SDHC_HW(_type_ ## _hw) \
+            DECLARE_COMPONENT_SDHC_DRV(_type_)
+
+
+#define DECLARE_AND_CONNECT_INSTANCE_SDHC( \
+    _type_, \
+    _inst_ \
+    ) \
+        DECLARE_AND_CONNECT_INSTANCE_SDHC_DRV_HW( \
+            _type_ ## _hw, \
+            _inst_ ## _hw, \
+            _type_, \
+            _inst_)
+
+#define CONFIGURE_INSTANCE_SDHC(_inst_, _idx_) \
+    CONFIGURE_INSTANCE_SDHC_HW(_inst_ ## _hw, _inst_, _idx_)
