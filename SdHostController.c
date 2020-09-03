@@ -601,14 +601,26 @@ NONNULL_ALL
 storage_rpc_getState(
     uint32_t* flags)
 {
+    *flags = 0U;
     if (!ctx.isInitilized)
     {
         Debug_LOG_ERROR("Initialization was unsuccessful.");
         return OS_ERROR_INVALID_STATE;
     }
 
-    *flags = 0U;
-    Debug_LOG_ERROR("Request not supported.");
+    if (0 != clientMux_lock())
+    {
+        Debug_LOG_ERROR("Failed to lock mutex!");
+        return OS_ERROR_ACCESS_DENIED;
+    }
 
-    return OS_ERROR_NOT_SUPPORTED;
+    *flags = sdio_getPresentStateRegister(&ctx.sdhc_ctx.sdio);
+
+    if (0 != clientMux_unlock())
+    {
+        Debug_LOG_ERROR("Failed to unlock mutex!");
+        return OS_ERROR_ACCESS_DENIED;
+    }
+
+    return OS_SUCCESS;
 }
