@@ -18,20 +18,15 @@
 //------------------------------------------------------------------------------
 typedef struct SdHostController
 {
-    sdio_host_dev_t  sdio;
-    ps_io_ops_t      io_ops;
-    mmc_card_t       mmc_card;
-} SdHostController_t;
-
-typedef struct SdHostController_Ctx
-{
+    sdio_host_dev_t     sdio;
+    ps_io_ops_t         io_ops;
+    mmc_card_t          mmc_card;
     bool                isInitilized;
-    SdHostController_t  sdhc_ctx;
     OS_Dataport_t       port_storage;
+}
+SdHostController_t;
 
-} SdHostController_Ctx_t;
-
-static SdHostController_Ctx_t ctx =
+static SdHostController_t ctx =
 {
     .isInitilized  = false,
     .port_storage  = OS_DATAPORT_ASSIGN(storage_port)
@@ -213,7 +208,7 @@ getBlockSize(mmc_card_t mmcCard)
 void
 post_init(void)
 {
-    int rslt = camkes_io_ops(&ctx.sdhc_ctx.io_ops);
+    int rslt = camkes_io_ops(&ctx.io_ops);
     if (0 != rslt)
     {
         Debug_LOG_ERROR("camkes_io_ops() failed: rslt = %i", rslt);
@@ -222,8 +217,8 @@ post_init(void)
 
     rslt = sdio_init(
         peripheral_idx,
-        &ctx.sdhc_ctx.io_ops,
-        &ctx.sdhc_ctx.sdio);
+        &ctx.io_ops,
+        &ctx.sdio);
 
     if (0 != rslt)
     {
@@ -234,9 +229,9 @@ post_init(void)
     Debug_LOG_DEBUG("Initializing SdHostController...");
 
     rslt = mmc_init(
-               &ctx.sdhc_ctx.sdio,
-               &ctx.sdhc_ctx.io_ops,
-               &ctx.sdhc_ctx.mmc_card);
+               &ctx.sdio,
+               &ctx.io_ops,
+               &ctx.mmc_card);
 
     if (0 != rslt)
     {
@@ -251,7 +246,7 @@ post_init(void)
         "Reading SD Controller #%i interrupt number.",
         peripheral_idx);
 
-    rslt = mmc_nth_irq(ctx.sdhc_ctx.mmc_card, peripheral_idx);
+    rslt = mmc_nth_irq(ctx.mmc_card, peripheral_idx);
     if (rslt < 0)
     {
         Debug_LOG_ERROR(
@@ -288,8 +283,8 @@ void irq_handle(void)
     }
 
     if (0 != mmc_handle_irq(
-        ctx.sdhc_ctx.mmc_card,
-        mmc_nth_irq(ctx.sdhc_ctx.mmc_card, 0)))
+        ctx.mmc_card,
+        mmc_nth_irq(ctx.mmc_card, 0)))
     {
         Debug_LOG_ERROR("No IRQ to handle!");
     }
@@ -338,12 +333,12 @@ storage_rpc_write(
         return OS_ERROR_INVALID_STATE;
     }
 
-    const size_t blockSz = getBlockSize(ctx.sdhc_ctx.mmc_card);
+    const size_t blockSz = getBlockSize(ctx.mmc_card);
     const OS_Error_t rslt = verifyParameters(
         offset,
         size,
         blockSz,
-        getStorageSize(ctx.sdhc_ctx.mmc_card));
+        getStorageSize(ctx.mmc_card));
 
     if (OS_SUCCESS != rslt || (0U == size))
     {
@@ -383,7 +378,7 @@ storage_rpc_write(
         else
         {
             writeResult = mmc_block_write(
-                            ctx.sdhc_ctx.mmc_card,
+                            ctx.mmc_card,
                             blockToWrite,
                             1, // TODO Change to nBlocks.
                             storagePortOffset,
@@ -447,12 +442,12 @@ storage_rpc_read(
         return OS_ERROR_INVALID_STATE;
     }
 
-    const size_t blockSz = getBlockSize(ctx.sdhc_ctx.mmc_card);
+    const size_t blockSz = getBlockSize(ctx.mmc_card);
     const OS_Error_t rslt = verifyParameters(
         offset,
         size,
         blockSz,
-        getStorageSize(ctx.sdhc_ctx.mmc_card));
+        getStorageSize(ctx.mmc_card));
 
     if (OS_SUCCESS != rslt || (0U == size))
     {
@@ -492,7 +487,7 @@ storage_rpc_read(
         else
         {
             readResult = mmc_block_read(
-                            ctx.sdhc_ctx.mmc_card,
+                            ctx.mmc_card,
                             blockToRead,
                             1, // TODO Change to nBlocks.
                             storagePortOffset,
@@ -563,7 +558,7 @@ storage_rpc_getSize(
 
     Debug_LOG_TRACE("%s: Getting the size...", __func__);
 
-    *size = getStorageSize(ctx.sdhc_ctx.mmc_card);
+    *size = getStorageSize(ctx.mmc_card);
 
     return OS_SUCCESS;
 }
@@ -585,7 +580,7 @@ storage_rpc_getBlockSize(
 
     Debug_LOG_TRACE("%s: Getting the block size...", __func__);
 
-    *blockSize = getBlockSize(ctx.sdhc_ctx.mmc_card);
+    *blockSize = getBlockSize(ctx.mmc_card);
 
     return OS_SUCCESS;
 }
@@ -612,7 +607,7 @@ storage_rpc_getState(
         return OS_ERROR_ACCESS_DENIED;
     }
 
-    *flags = sdio_get_present_state(&ctx.sdhc_ctx.sdio);
+    *flags = sdio_getPresentStateRegister(&ctx.sdio);
 
     if (0 != clientMux_unlock())
     {
