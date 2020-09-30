@@ -7,6 +7,7 @@
 
 #include "LibDebug/Debug.h"
 #include "sdhc/mmc.h"
+#include "compiler.h"
 
 #include <stddef.h>
 #include <string.h>
@@ -57,6 +58,7 @@ isValidStorageArea(
 static
 bool
 areValidArguments(
+    DECL_UNUSED_VAR(char const* funcName),
     off_t   const offset,
     off_t   const size,
     size_t  const blockSz)
@@ -67,9 +69,10 @@ areValidArguments(
 
     if (0 != (offset % blockSz))
     {
-        Debug_LOG_ERROR(
+        Debug_LOG_ERROR("%s: "
             "Offset is not a multiplier of the blockSz: "
             "offset = %" PRIiMAX ", blockSz = %zu",
+            funcName,
             offset,
             blockSz);
 
@@ -78,9 +81,10 @@ areValidArguments(
 
     if (0 != (size % blockSz))
     {
-        Debug_LOG_ERROR(
+        Debug_LOG_ERROR("%s: "
             "Size is not a multiplier of the blockSz: "
             "size = %" PRIiMAX ", blockSz = %zu",
+            funcName,
             size,
             blockSz);
 
@@ -93,6 +97,7 @@ areValidArguments(
 static
 OS_Error_t
 verifyParameters(
+    char    const *funcName,
     off_t   const offset,
     off_t   const size,
     size_t  const blockSz,
@@ -100,12 +105,13 @@ verifyParameters(
 {
     if ((offset < 0) || (size < 0) || (0U == blockSz) || (storageSz <= 0))
     {
-        Debug_LOG_ERROR(
+        Debug_LOG_ERROR("%s: "
             "One of the parameters is out of the range (less or equal 0): "
             "offset = %" PRIiMAX ","
             "size = %" PRIiMAX ","
             "blockSz %zu,"
             "storageSz %" PRIiMAX,
+            funcName,
             offset,
             size,
             blockSz,
@@ -119,24 +125,26 @@ verifyParameters(
     {
         // invalid request by the client, as it knows the data port size and
         // should never ask to write more data than port size
-        Debug_LOG_ERROR(
+        Debug_LOG_ERROR("%s: "
             "size %" PRIiMAX " exceeds dataport size %zu",
+            funcName,
             size,
             dataport_size);
 
         return OS_ERROR_INVALID_PARAMETER;
     }
 
-    if (!areValidArguments(offset, size, blockSz))
+    if (!areValidArguments(funcName, offset, size, blockSz))
     {
         return OS_ERROR_INVALID_PARAMETER;
     }
 
     if (!isValidStorageArea(offset, size, storageSz))
     {
-        Debug_LOG_ERROR(
+        Debug_LOG_ERROR("%s: "
             "Request outside of the storage area: offset = %" PRIiMAX ", "
             "size = %" PRIiMAX "",
+            funcName,
             offset,
             size);
 
@@ -150,13 +158,13 @@ static
 off_t
 getStorageSize(mmc_card_t mmcCard)
 {
-    Debug_LOG_TRACE("Getting the card size...");
+    Debug_LOG_TRACE("%s: getting the card size...", __func__);
 
     // We are about to access the HW peripheral i.e. shared resource with the
     // irq_handle, so we need to take the possesion of it.
     if (0 != clientMux_lock())
     {
-        Debug_LOG_ERROR("Failed to lock mutex!");
+        Debug_LOG_ERROR("%s: failed to lock mutex!", __func__);
         return 0;
     }
 
@@ -164,12 +172,7 @@ getStorageSize(mmc_card_t mmcCard)
 
     if (0 != clientMux_unlock())
     {
-        Debug_LOG_ERROR("Failed to unlock mutex!");
-    }
-
-    if (0 == cardCapacity)
-    {
-        Debug_LOG_WARNING("SD card size is 0. Card not inserted?");
+        Debug_LOG_ERROR("%s: failed to unlock mutex!", __func__);
     }
 
     return (off_t)cardCapacity;
@@ -179,13 +182,13 @@ static
 size_t
 getBlockSize(mmc_card_t mmcCard)
 {
-    Debug_LOG_TRACE("Getting the card's block size...");
+    Debug_LOG_TRACE("%s: getting the card's block size...", __func__);
 
     // We are about to access the HW peripheral i.e. shared resource with the
     // irq_handle, so we need to take the possesion of it.
     if (0 != clientMux_lock())
     {
-        Debug_LOG_ERROR("Failed to lock mutex!");
+        Debug_LOG_ERROR("%s: failed to lock mutex!", __func__);
         return 0;
     }
 
@@ -193,12 +196,7 @@ getBlockSize(mmc_card_t mmcCard)
 
     if (0 != clientMux_unlock())
     {
-        Debug_LOG_ERROR("Failed to unlock mutex!");
-    }
-
-    if (0U == blockSize)
-    {
-        Debug_LOG_ERROR("SD card's block size is 0.");
+        Debug_LOG_ERROR("%s: failed to unlock mutex!", __func__);
     }
 
     return blockSize;
@@ -270,7 +268,6 @@ void irq_handle(void)
 {
     if (!ctx.isInitilized)
     {
-        Debug_LOG_ERROR("initialization failed, fail call %s()", __func__);
         goto irq_handle_exit;
     }
 
@@ -329,12 +326,12 @@ storage_rpc_write(
 
     if (!ctx.isInitilized)
     {
-        Debug_LOG_ERROR("Initialization was unsuccessful.");
         return OS_ERROR_INVALID_STATE;
     }
 
     const size_t blockSz = getBlockSize(ctx.mmc_card);
     const OS_Error_t rslt = verifyParameters(
+        __func__,
         offset,
         size,
         blockSz,
@@ -361,9 +358,10 @@ storage_rpc_write(
     {
         const unsigned long blockToWrite = startBlock + i;
 
-        Debug_LOG_TRACE(
-            "Writing block %lu... "
+        Debug_LOG_TRACE("%s: "
+            "writing block %lu... "
             "offset = %" PRIiMAX ", size = %zu, startBlock = %lu, nBlocks = %i",
+            __func__,
             blockToWrite,
             offset,
             size,
@@ -374,7 +372,7 @@ storage_rpc_write(
         // irq_handle, so we need to take the possesion of it.
         if (0 != clientMux_lock())
         {
-            Debug_LOG_ERROR("Failed to lock mutex!");
+            Debug_LOG_ERROR("%s: failed to lock mutex!", __func__);
             break;
         }
 
@@ -388,9 +386,10 @@ storage_rpc_write(
                         NULL);
         if (writeResult < 0)
         {
-            Debug_LOG_ERROR(
-                "Write of block %lu failed: "
+            Debug_LOG_ERROR("%s: "
+                "write of block %lu failed: "
                 "offset = %" PRIiMAX ", size = %zu, writeResult = %li",
+                __func__,
                 blockToWrite,
                 offset,
                 size,
@@ -399,7 +398,8 @@ storage_rpc_write(
         else
         {
             writtenInLoop += writeResult;
-            Debug_LOG_TRACE("Written %zu out of %zu bytes.", writtenInLoop, size);
+            Debug_LOG_TRACE("%s: written %zu out of %zu bytes.",
+                            __func__, writtenInLoop, size);
 
             *written = writtenInLoop;
         }
@@ -407,13 +407,20 @@ storage_rpc_write(
 
         if (0 != clientMux_unlock())
         {
-            Debug_LOG_ERROR("Failed to unlock mutex!");
+            Debug_LOG_ERROR("%s: failed to unlock mutex!", __func__);
             break;
         }
     }
 
-    Debug_LOG_DEBUG("Successfully written %zu bytes.", writtenInLoop);
-    return (size == writtenInLoop) ? OS_SUCCESS : OS_ERROR_ABORTED;
+    if (size != writtenInLoop)
+    {
+        Debug_LOG_WARNING("%s: could write only %zu bytes out of %zu",
+            __func__, writtenInLoop, size);
+        return OS_ERROR_ABORTED;
+    }
+    Debug_LOG_TRACE("%s: successfully written %zu bytes.",
+                    __func__, writtenInLoop);
+    return OS_SUCCESS;
 }
 
 
@@ -438,12 +445,12 @@ storage_rpc_read(
 
     if (!ctx.isInitilized)
     {
-        Debug_LOG_ERROR("Initialization was unsuccessful.");
         return OS_ERROR_INVALID_STATE;
     }
 
     const size_t blockSz = getBlockSize(ctx.mmc_card);
     const OS_Error_t rslt = verifyParameters(
+        __func__,
         offset,
         size,
         blockSz,
@@ -470,9 +477,10 @@ storage_rpc_read(
     {
         const unsigned long blockToRead = startBlock + i;
 
-        Debug_LOG_TRACE(
-            "Reading block %lu... "
+        Debug_LOG_TRACE("%s: "
+            "reading block %lu... "
             "offset = %" PRIiMAX ", size = %zu, startBlock = %lu, nBlocks = %i",
+            __func__,
             blockToRead,
             offset,
             size,
@@ -483,7 +491,7 @@ storage_rpc_read(
         // irq_handle, so we need to take the possesion of it.
         if (0 != clientMux_lock())
         {
-            Debug_LOG_ERROR("Failed to lock mutex!");
+            Debug_LOG_ERROR("%s: failed to lock mutex!", __func__);
             break;
         }
 
@@ -497,9 +505,10 @@ storage_rpc_read(
                         NULL);
         if (readResult < 0)
         {
-            Debug_LOG_ERROR(
-                "Read of block %lu failed: "
+            Debug_LOG_ERROR("%s: "
+                "read of block %lu failed: "
                 "offset = %" PRIiMAX ", size = %zu, readResult = %li",
+                __func__,
                 blockToRead,
                 offset,
                 size,
@@ -508,7 +517,8 @@ storage_rpc_read(
         else
         {
             readInLoop += readResult;
-            Debug_LOG_TRACE("Read %zu out of %zu bytes.", readInLoop, size);
+            Debug_LOG_TRACE("%s: read %zu out of %zu bytes.",
+                            __func__, readInLoop, size);
 
             *read = readInLoop;
         }
@@ -516,13 +526,19 @@ storage_rpc_read(
 
         if (0 != clientMux_unlock())
         {
-            Debug_LOG_ERROR("Failed to unlock mutex!");
+            Debug_LOG_ERROR("%s: failed to unlock mutex!", __func__);
             break;
         }
     }
 
-    Debug_LOG_DEBUG("Successfully read %zu bytes.", readInLoop);
-    return (size == readInLoop) ? OS_SUCCESS : OS_ERROR_ABORTED;
+    if (size != readInLoop)
+    {
+        Debug_LOG_WARNING("%s: could read only %zu bytes out of %zu",
+            __func__, readInLoop, size);
+        return OS_ERROR_ABORTED;
+    }
+    Debug_LOG_TRACE("%s: successfully read %zu bytes.", __func__, readInLoop);
+    return OS_SUCCESS;
 }
 
 
@@ -552,11 +568,8 @@ storage_rpc_getSize(
 {
     if (!ctx.isInitilized)
     {
-        Debug_LOG_ERROR("Initialization was unsuccessful.");
         return OS_ERROR_INVALID_STATE;
     }
-
-    Debug_LOG_TRACE("%s: Getting the size...", __func__);
 
     *size = getStorageSize(ctx.mmc_card);
 
@@ -574,11 +587,10 @@ storage_rpc_getBlockSize(
 {
     if (!ctx.isInitilized)
     {
-        Debug_LOG_ERROR("Initialization was unsuccessful.");
         return OS_ERROR_INVALID_STATE;
     }
 
-    Debug_LOG_TRACE("%s: Getting the block size...", __func__);
+    Debug_LOG_TRACE("%s: getting the block size...", __func__);
 
     *blockSize = getBlockSize(ctx.mmc_card);
 
@@ -597,13 +609,13 @@ storage_rpc_getState(
     *flags = 0U;
     if (!ctx.isInitilized)
     {
-        Debug_LOG_ERROR("Initialization was unsuccessful.");
+        Debug_LOG_ERROR("%s: initialization was unsuccessful", __func__);
         return OS_ERROR_INVALID_STATE;
     }
 
     if (0 != clientMux_lock())
     {
-        Debug_LOG_ERROR("Failed to lock mutex!");
+        Debug_LOG_ERROR("%s: failed to lock mutex!", __func__);
         return OS_ERROR_ACCESS_DENIED;
     }
 
@@ -611,7 +623,7 @@ storage_rpc_getState(
 
     if (0 != clientMux_unlock())
     {
-        Debug_LOG_ERROR("Failed to unlock mutex!");
+        Debug_LOG_ERROR("%s: failed to unlock mutex!", __func__);
         return OS_ERROR_ACCESS_DENIED;
     }
 
