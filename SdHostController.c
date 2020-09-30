@@ -607,7 +607,7 @@ storage_rpc_getState(
         return OS_ERROR_ACCESS_DENIED;
     }
 
-    *flags = sdio_getPresentStateRegister(&ctx.sdio);
+    *flags = sdio_get_present_state_register(&ctx.sdio);
 
     if (0 != clientMux_unlock())
     {
