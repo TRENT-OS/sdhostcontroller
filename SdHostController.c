@@ -351,10 +351,13 @@ storage_rpc_write(
     // TODO Underlying driver supports currently only 1 block operations even
     //      despite the interface claiming something different. As a workaround
     //      block by block operation will be executed.
-    void* storagePortOffset = OS_Dataport_getBuf(ctx.port_storage);
-    size_t writtenInLoop = 0U;
+    void*   storagePortOffset = OS_Dataport_getBuf(ctx.port_storage);
+    size_t  writtenInLoop = 0U;
+    long    writeResult = 0;
 
-    for (unsigned long i = 0; i < nBlocks; ++i)
+    for (unsigned long i = 0;
+            i < nBlocks && writeResult >= 0;
+            ++i)
     {
         const unsigned long blockToWrite = startBlock + i;
 
@@ -367,31 +370,22 @@ storage_rpc_write(
             startBlock,
             nBlocks);
 
-        long writeResult = -1;
-
         // We are about to access the HW peripheral i.e. shared resource with the
         // irq_handle, so we need to take the possesion of it.
         if (0 != clientMux_lock())
         {
             Debug_LOG_ERROR("Failed to lock mutex!");
-        }
-        else
-        {
-            writeResult = mmc_block_write(
-                            ctx.mmc_card,
-                            blockToWrite,
-                            1, // TODO Change to nBlocks.
-                            storagePortOffset,
-                            0,
-                            NULL,
-                            NULL);
-
-            if (0 != clientMux_unlock())
-            {
-                Debug_LOG_ERROR("Failed to unlock mutex!");
-            }
+            break;
         }
 
+        writeResult = mmc_block_write(
+                        ctx.mmc_card,
+                        blockToWrite,
+                        1, // TODO Change to nBlocks.
+                        storagePortOffset,
+                        0,
+                        NULL,
+                        NULL);
         if (writeResult < 0)
         {
             Debug_LOG_ERROR(
@@ -405,15 +399,21 @@ storage_rpc_write(
         else
         {
             writtenInLoop += writeResult;
-            storagePortOffset += blockSz;
             Debug_LOG_TRACE("Written %zu out of %zu bytes.", writtenInLoop, size);
+
+            *written = writtenInLoop;
+        }
+        storagePortOffset += blockSz;
+
+        if (0 != clientMux_unlock())
+        {
+            Debug_LOG_ERROR("Failed to unlock mutex!");
+            break;
         }
     }
 
     Debug_LOG_DEBUG("Successfully written %zu bytes.", writtenInLoop);
-
-    *written = writtenInLoop;
-    return (size == writtenInLoop) ? OS_SUCCESS : OS_ERROR_GENERIC;
+    return (size == writtenInLoop) ? OS_SUCCESS : OS_ERROR_ABORTED;
 }
 
 
@@ -460,10 +460,13 @@ storage_rpc_read(
     // TODO Underlying driver supports currently only 1 block operations even
     //      despite the interface claiming something different. As a workaround
     //      block by block operation will be executed.
-    void* storagePortOffset = OS_Dataport_getBuf(ctx.port_storage);
-    size_t readInLoop = 0U;
+    void*   storagePortOffset = OS_Dataport_getBuf(ctx.port_storage);
+    size_t  readInLoop = 0U;
+    long    readResult = 0;
 
-    for (unsigned long i = 0; i < nBlocks; ++i)
+    for (unsigned long i = 0;
+            i < nBlocks && readResult >= 0;
+            ++i)
     {
         const unsigned long blockToRead = startBlock + i;
 
@@ -476,31 +479,22 @@ storage_rpc_read(
             startBlock,
             nBlocks);
 
-        long readResult = -1;
-
         // We are about to access the HW peripheral i.e. shared resource with the
         // irq_handle, so we need to take the possesion of it.
         if (0 != clientMux_lock())
         {
             Debug_LOG_ERROR("Failed to lock mutex!");
-        }
-        else
-        {
-            readResult = mmc_block_read(
-                            ctx.mmc_card,
-                            blockToRead,
-                            1, // TODO Change to nBlocks.
-                            storagePortOffset,
-                            0,
-                            NULL,
-                            NULL);
-
-            if (0 != clientMux_unlock())
-            {
-                Debug_LOG_ERROR("Failed to unlock mutex!");
-            }
+            break;
         }
 
+        readResult = mmc_block_read(
+                        ctx.mmc_card,
+                        blockToRead,
+                        1, // TODO Change to nBlocks.
+                        storagePortOffset,
+                        0,
+                        NULL,
+                        NULL);
         if (readResult < 0)
         {
             Debug_LOG_ERROR(
@@ -514,15 +508,21 @@ storage_rpc_read(
         else
         {
             readInLoop += readResult;
-            storagePortOffset += blockSz;
             Debug_LOG_TRACE("Read %zu out of %zu bytes.", readInLoop, size);
+
+            *read = readInLoop;
+        }
+        storagePortOffset += blockSz;
+
+        if (0 != clientMux_unlock())
+        {
+            Debug_LOG_ERROR("Failed to unlock mutex!");
+            break;
         }
     }
 
     Debug_LOG_DEBUG("Successfully read %zu bytes.", readInLoop);
-
-    *read = readInLoop;
-    return (size == readInLoop) ? OS_SUCCESS : OS_ERROR_GENERIC;
+    return (size == readInLoop) ? OS_SUCCESS : OS_ERROR_ABORTED;
 }
 
 
