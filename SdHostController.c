@@ -4,8 +4,10 @@
 
 #include "OS_Error.h"
 #include "OS_Dataport.h"
+#include "interfaces/if_OS_Storage.h"
 
 #include "LibDebug/Debug.h"
+#include "LibUtil/Bitmap.h"
 #include "sdhc/mmc.h"
 #include "compiler.h"
 
@@ -34,20 +36,35 @@
 #define PRES_STATE_CIHB         (1 << 0)  //Command Inhibit(CMD)
 
 //------------------------------------------------------------------------------
+enum
+{
+    InitFailBit_IO_OPS,
+    InitFailBit_SDIO,
+    InitFailBit_CINST,
+    InitFailBit_MMC,
+    InitFailBit_SDIRQ,
+
+    InitFailBit_MAX = 8 /* Must not exceed 8 unless we change the size of
+                           initFailBitmap in SdHostController_t */
+}
+InitFailBit_e;
+
 typedef struct SdHostController
 {
     sdio_host_dev_t     sdio;
     ps_io_ops_t         io_ops;
     mmc_card_t          mmc_card;
-    bool                isInitilized;
     OS_Dataport_t       port_storage;
+    Bitmap8             initFailBitmap;
 }
 SdHostController_t;
 
+#define NOT_INITIALIZED (-1)
+
 static SdHostController_t ctx =
 {
-    .isInitilized  = false,
-    .port_storage  = OS_DATAPORT_ASSIGN(storage_port)
+    .port_storage   = OS_DATAPORT_ASSIGN(storage_port),
+    .initFailBitmap = NOT_INITIALIZED,
 };
 
 
@@ -219,14 +236,32 @@ getBlockSize(mmc_card_t mmcCard)
     return blockSize;
 }
 
+static inline
+OS_Error_t
+checkInit(SdHostController_t* ctx)
+{
+    if (Bitmap_GET_BIT(ctx->initFailBitmap, InitFailBit_CINST))
+    {
+        return OS_ERROR_DEVICE_NOT_PRESENT;
+    }
+    if (NOT_INITIALIZED == ctx->initFailBitmap)
+    {
+        return OS_ERROR_INVALID_STATE;
+    }
+    return OS_SUCCESS;
+}
+
 //------------------------------------------------------------------------------
 void
 post_init(void)
 {
+    ctx.initFailBitmap = 0;
+
     int rslt = camkes_io_ops(&ctx.io_ops);
     if (0 != rslt)
     {
         Debug_LOG_ERROR("camkes_io_ops() failed: rslt = %i", rslt);
+        Bitmap_SET_BIT(ctx.initFailBitmap, InitFailBit_IO_OPS);
         return;
     }
 
@@ -238,11 +273,13 @@ post_init(void)
     if (0 != rslt)
     {
         Debug_LOG_ERROR("sdio_init() failed: rslt = %i", rslt);
+        Bitmap_SET_BIT(ctx.initFailBitmap, InitFailBit_SDIO);
         return;
     }
     // Check SD card presence
     if (!(sdio_get_present_state(&ctx.sdio) & PRES_STATE_CINST))
     {
+        Bitmap_SET_BIT(ctx.initFailBitmap, InitFailBit_CINST);
         Debug_LOG_INFO("%s: memory card not inserted", __func__);
         return;
     }
@@ -256,6 +293,7 @@ post_init(void)
 
     if (0 != rslt)
     {
+        Bitmap_SET_BIT(ctx.initFailBitmap, InitFailBit_MMC);
         Debug_LOG_ERROR("mmc_init() failed: rslt = %i", rslt);
         return;
     }
@@ -270,6 +308,7 @@ post_init(void)
     rslt = mmc_nth_irq(ctx.mmc_card, peripheral_idx);
     if (rslt < 0)
     {
+        Bitmap_SET_BIT(ctx.initFailBitmap, InitFailBit_SDIRQ);
         Debug_LOG_ERROR(
             "Could not detect SD Controller #%d IRQ. "
             "mmc_nth_irq() failed: rslt = %d",
@@ -283,14 +322,14 @@ post_init(void)
         "SD Controller #%i interrupt is %i",
         peripheral_idx,
         rslt);
-
-    ctx.isInitilized = true;
 }
 
 void irq_handle(void)
 {
-    if (!ctx.isInitilized)
+    if (OS_SUCCESS != checkInit(&ctx))
     {
+        Debug_LOG_TRACE("%s: failed, initialization was unsuccessful.",
+                        __func__);
         goto irq_handle_exit;
     }
 
@@ -347,13 +386,16 @@ storage_rpc_write(
 
     *written = 0U;
 
-    if (!ctx.isInitilized)
+    OS_Error_t rslt = checkInit(&ctx);
+    if (OS_SUCCESS != rslt)
     {
-        return OS_ERROR_INVALID_STATE;
+        Debug_LOG_TRACE("%s: failed, initialization was unsuccessful.",
+                        __func__);
+        return rslt;
     }
 
     const size_t blockSz = getBlockSize(ctx.mmc_card);
-    const OS_Error_t rslt = verifyParameters(
+    rslt = verifyParameters(
         __func__,
         offset,
         size,
@@ -466,13 +508,16 @@ storage_rpc_read(
 
     *read = 0U;
 
-    if (!ctx.isInitilized)
+    OS_Error_t rslt = checkInit(&ctx);
+    if (OS_SUCCESS != rslt)
     {
-        return OS_ERROR_INVALID_STATE;
+        Debug_LOG_TRACE("%s: failed, initialization was unsuccessful.",
+                        __func__);
+        return rslt;
     }
 
     const size_t blockSz = getBlockSize(ctx.mmc_card);
-    const OS_Error_t rslt = verifyParameters(
+    rslt = verifyParameters(
         __func__,
         offset,
         size,
@@ -589,9 +634,12 @@ NONNULL_ALL
 storage_rpc_getSize(
     off_t* const size)
 {
-    if (!ctx.isInitilized)
+    OS_Error_t rslt = checkInit(&ctx);
+    if (OS_SUCCESS != rslt)
     {
-        return OS_ERROR_INVALID_STATE;
+        Debug_LOG_TRACE("%s: failed, initialization was unsuccessful.",
+                        __func__);
+        return rslt;
     }
 
     *size = getStorageSize(ctx.mmc_card);
@@ -608,9 +656,12 @@ NONNULL_ALL
 storage_rpc_getBlockSize(
     size_t* const blockSize)
 {
-    if (!ctx.isInitilized)
+    OS_Error_t rslt = checkInit(&ctx);
+    if (OS_SUCCESS != rslt)
     {
-        return OS_ERROR_INVALID_STATE;
+        Debug_LOG_TRACE("%s: failed, initialization was unsuccessful.",
+                        __func__);
+        return rslt;
     }
 
     Debug_LOG_TRACE("%s: getting the block size...", __func__);
@@ -630,10 +681,13 @@ storage_rpc_getState(
     uint32_t* flags)
 {
     *flags = 0U;
-    if (!ctx.isInitilized)
+
+    OS_Error_t rslt = checkInit(&ctx);
+    if (OS_SUCCESS != rslt)
     {
-        Debug_LOG_ERROR("%s: initialization was unsuccessful", __func__);
-        return OS_ERROR_INVALID_STATE;
+        Debug_LOG_TRACE("%s: failed, initialization was unsuccessful.",
+                        __func__);
+        return rslt;
     }
 
     if (0 != clientMux_lock())
@@ -642,7 +696,10 @@ storage_rpc_getState(
         return OS_ERROR_ACCESS_DENIED;
     }
 
-    *flags = sdio_get_present_state_register(&ctx.sdio);
+    if (Bitmap_GET_MASK(sdio_get_present_state(&ctx.sdio), PRES_STATE_CINST))
+    {
+        Bitmap_SET_BIT(*flags, OS_Storage_StateFlag_MEDIUM_PRESENT);
+    }
 
     if (0 != clientMux_unlock())
     {
