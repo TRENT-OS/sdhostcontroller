@@ -240,6 +240,12 @@ post_init(void)
         Debug_LOG_ERROR("sdio_init() failed: rslt = %i", rslt);
         return;
     }
+    // Check SD card presence
+    if (!(sdio_get_present_state(&ctx.sdio) & PRES_STATE_CINST))
+    {
+        Debug_LOG_INFO("%s: memory card not inserted", __func__);
+        return;
+    }
 
     Debug_LOG_DEBUG("Initializing SdHostController...");
 
