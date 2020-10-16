@@ -220,8 +220,6 @@ post_init(void)
         return;
     }
 
-    // TODO Do not pass sdio_default_id() here but relate the id to
-    //      the paddr configuration passed in the main camkes file.
     rslt = sdio_init(
         peripheral_idx,
         &ctx.sdhc_ctx.io_ops,
