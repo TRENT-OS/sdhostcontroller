@@ -1,9 +1,9 @@
-/*
- *  SdHostController defaults for platform imx6
+/* Copyright (C) 2020, Hensoldt Cyber GmbH */
+/**
+ * @file
+ * @brief Platform defaults for the i.MX6.
  *
- *  Copyright (C) 2020, Hensoldt Cyber GmbH
- *
- */
+*/
 
 #define SDHC1_PADDR 0x02190000
 #define SDHC2_PADDR 0x02194000
