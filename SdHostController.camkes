@@ -14,6 +14,14 @@ import <if_OS_Storage.camkes>;
 //------------------------------------------------------------------------------
 // Component
 
+/**
+ * @brief   Declares the SDHC HW component.
+ *
+ * @note    Feel free to use the DECLARE_COMPONENT_SDHC wrapper to declare the
+ *          pair of the Driver and the Hardware components.
+ *
+ * @param   _type_hw_ - [in] Component's type name.
+ */
 #define DECLARE_COMPONENT_SDHC_HW(_type_hw_) \
     \
     component _type_hw_ { \
@@ -23,7 +31,14 @@ import <if_OS_Storage.camkes>;
         emits     IRQ   irq; \
     }
 
-
+/**
+ * @brief   Declares the SDHC driver component.
+ *
+ * @note    Feel free to use the DECLARE_COMPONENT_SDHC wrapper to declare the
+ *          pair of the Driver and Hw components.
+ *
+ * @param   _name_ - [in] Component's type name.
+ */
 #define DECLARE_COMPONENT_SDHC_DRV(_name_) \
     component _name_ { \
         dataport  Buf               regBase; \
@@ -40,6 +55,17 @@ import <if_OS_Storage.camkes>;
 //------------------------------------------------------------------------------
 // Instance Connection
 
+/**
+ * @brief   Declares and connects the SDHC driver component to the HW part.
+ *
+ * @note    Feel free to use the DECLARE_AND_CONNECT_INSTANCE_SDHC wrapper to
+ *          declare the pair of the Driver and Hw components.
+ *
+ * @param   _type_hw_   - [in] Hardware component's type name.
+ * @param   _inst_hw_   - [in] Hardware component's instance name.
+ * @param   _type_drv_  - [in] Component's type name.
+ * @param   _inst_drv_  - [in] Component's instance name.
+ */
 #define DECLARE_AND_CONNECT_INSTANCE_SDHC_DRV_HW( \
     _type_hw_, \
     _inst_hw_, \
@@ -60,6 +86,17 @@ import <if_OS_Storage.camkes>;
 //------------------------------------------------------------------------------
 // Instance Configuration
 
+/**
+ * @brief   Configures the SDHC HW component.
+ *
+ * @note    Feel free to use the CONFIGURE_INSTANCE_SDHC wrapper so that HW part
+ *          is not visible from the upper layers.
+ *
+ * @param   _inst_hw_   - [in] Hardware component's instance.
+ * @param   _inst_      - [in] Component's instance.
+ * @param   _idx_       - [in] Index of the peripheral (sd card slot) to be
+ *                             used.
+ */
 #define CONFIGURE_INSTANCE_SDHC_HW( \
             _inst_hw_, \
             _inst_, \
@@ -75,11 +112,23 @@ import <if_OS_Storage.camkes>;
 //------------------------------------------------------------------------------
 // convenience macros, since SDHC = Driver + HW
 
+/**
+ * @brief   Declares the SDHC driver component.
+ *
+ * @note    This is the preferred way of declaring this component.
+ *
+ * @param   _type_ - [in] Component's type name.
+ */
 #define DECLARE_COMPONENT_SDHC(_type_) \
             DECLARE_COMPONENT_SDHC_HW(_type_ ## _hw) \
             DECLARE_COMPONENT_SDHC_DRV(_type_)
 
-
+/**
+ * @brief   Declares and connects the SDHC driver component to the HW part.
+ *
+ * @param   _type_  - [in] Component's type name.
+ * @param   _inst_  - [in] Component's instance name.
+ */
 #define DECLARE_AND_CONNECT_INSTANCE_SDHC( \
     _type_, \
     _inst_ \
@@ -90,5 +139,15 @@ import <if_OS_Storage.camkes>;
             _type_, \
             _inst_)
 
+/**
+ * @brief   Configures the SDHC component.
+ *
+ * @note    This macros is basically to selector of the HW peripheral (sd card
+ *          slot) to be used.
+ *
+ * @param   _inst_hw_   - [in] Hardware component's instance.
+ * @param   _idx_       - [in] Index of the peripheral (sd card slot) to be
+ *                             used.
+ */
 #define CONFIGURE_INSTANCE_SDHC(_inst_, _idx_) \
     CONFIGURE_INSTANCE_SDHC_HW(_inst_ ## _hw, _inst_, _idx_)
