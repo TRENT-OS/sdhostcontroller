@@ -15,6 +15,23 @@
 #include <camkes.h>
 #include <camkes/io.h>
 
+// these defines are at the moment a copy & paste from libdhcdrivers/src/sdhc.c
+// in the future we may have them exported in a .h and included here
+/* Present State Register */
+#define PRES_STATE_DAT3         (1 << 23)
+#define PRES_STATE_DAT2         (1 << 22)
+#define PRES_STATE_DAT1         (1 << 21)
+#define PRES_STATE_DAT0         (1 << 20)
+#define PRES_STATE_WPSPL        (1 << 19) //Write Protect Switch Pin Level
+#define PRES_STATE_CDPL         (1 << 18) //Card Detect Pin Level
+#define PRES_STATE_CINST        (1 << 16) //Card Inserted
+#define PRES_STATE_BWEN         (1 << 10) //Buffer Write Enable
+#define PRES_STATE_RTA          (1 << 9)  //Read Transfer Active
+#define PRES_STATE_WTA          (1 << 8)  //Write Transfer Active
+#define PRES_STATE_SDSTB        (1 << 3)  //SD Clock Stable
+#define PRES_STATE_DLA          (1 << 2)  //Data Line Active
+#define PRES_STATE_CDIHB        (1 << 1)  //Command Inhibit(DATA)
+#define PRES_STATE_CIHB         (1 << 0)  //Command Inhibit(CMD)
 
 //------------------------------------------------------------------------------
 typedef struct SdHostController
