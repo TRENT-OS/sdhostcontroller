@@ -1,5 +1,8 @@
-/*
- * Copyright (C) 2020, HENSOLDT Cyber GmbH
+/* Copyright (C) 2020, HENSOLDT Cyber GmbH */
+
+/**
+ * @file
+ * @brief   Driver for the Secure Digital Host Controller
  */
 
 #include "OS_Error.h"
@@ -368,14 +371,32 @@ irq_handle_exit:;
 }
 
 //------------------------------------------------------------------------------
-// This is a CAmkES RPC interface handler. It's guaranteed that "written"
-// never points to NULL.
+/**
+ * @brief   Writes data to the storage.
+ *
+ * @note    Given data size and offset must be block size aligned!
+ *
+ * @note    This is a CAmkES RPC interface handler. It's guaranteed that
+ *          "written" never points to NULL.
+ *
+ * @return  An error code.
+ *
+ * @retval  OS_ERROR_DEVICE_NOT_PRESENT - SD card is not present in the slot.
+ * @retval  OS_ERROR_INVALID_STATE      - Initialization was unsuccessful.
+ * @retval  OS_ERROR_INVALID_PARAMETER  - One of the given or storage parameters
+ *                                        is invalid.
+ * @retval  OS_ERROR_OUT_OF_BOUNDS      - Operation requested outside of the
+ *                                        storage area.
+ * @retval  OS_ERROR_ABORTED            - Failed to write all bytes.
+ * @retval  OS_SUCCESS                  - Write was successful.
+ */
 OS_Error_t
 NONNULL_ALL
 storage_rpc_write(
-    off_t   const offset,
-    size_t  const size,
-    size_t* const written)
+    off_t   const offset,   /**< [in]  Write start offset in bytes. */
+    size_t  const size,     /**< [in]  Number of bytes to be written. Must be a
+                                       multiple of the block size! */
+    size_t* const written   /**< [out] Number of bytes written. */)
 {
     Debug_LOG_DEBUG(
         "%s: offset = %" PRIiMAX ", size = %zu, *written = %zu",
@@ -490,14 +511,32 @@ storage_rpc_write(
 
 
 //------------------------------------------------------------------------------
-// This is a CAmkES RPC interface handler. It's guaranteed that "read" never
-// points to NULL.
+/**
+ * @brief   Reads from the storage.
+ *
+ * @note    Given data size and offset must be block size aligned!
+ *
+ * @note    This is a CAmkES RPC interface handler. It's guaranteed that
+ *          "read" never points to NULL.
+ *
+ * @return  An error code.
+ *
+ * @retval  OS_ERROR_DEVICE_NOT_PRESENT - SD card is not present in the slot.
+ * @retval  OS_ERROR_INVALID_STATE      - Initialization was unsuccessful.
+ * @retval  OS_ERROR_INVALID_PARAMETER  - One of the given or storage parameters
+ *                                        is invalid.
+ * @retval  OS_ERROR_OUT_OF_BOUNDS      - Operation requested outside of the
+ *                                        storage area.
+ * @retval  OS_ERROR_ABORTED            - Failed to read all bytes.
+ * @retval  OS_SUCCESS                  - Read was successful.
+ */
 OS_Error_t
 NONNULL_ALL
 storage_rpc_read(
-    off_t   const offset,
-    size_t  const size,
-    size_t* const read)
+    off_t   const offset,   /**< [in]  Read start offset in bytes. */
+    size_t  const size,     /**< [in]  Number of bytes to be read. Must be a
+                                       multiple of the block size! */
+    size_t* const read      /**< [out] Number of bytes read. */)
 {
     Debug_LOG_DEBUG(
         "%s: offset = %" PRIiMAX ", size = %zu, *read = %zu",
@@ -611,14 +650,24 @@ storage_rpc_read(
 
 
 //------------------------------------------------------------------------------
-// This is a CAmkES RPC interface handler. It's guaranteed that "erased" never
-// points to NULL.
+/**
+ * @brief   Erases given storage's memory area.
+ *
+ * @note    This is a CAmkES RPC interface handler. It's guaranteed that
+ *          "erased" never points to NULL.
+ *
+ * @todo    SEOS-1817 was created to investigate possible implementations.
+ *
+ * @return  An error code.
+ *
+ * @retval  OS_ERROR_NOT_IMPLEMENTED - Not implemented yet.
+ */
 OS_Error_t
 NONNULL_ALL
 storage_rpc_erase(
-    off_t  const offset,
-    off_t  const size,
-    off_t* const erased)
+    off_t  const offset,    /**< [in]  Erase start offset in bytes. */
+    off_t  const size,      /**< [in]  Number of bytes to be erased. */
+    off_t* const erased     /**< [out] Number of bytes erased. */)
 {
     *erased = 0U;
 
@@ -627,12 +676,22 @@ storage_rpc_erase(
 
 
 //------------------------------------------------------------------------------
-// This is a CAmkES RPC interface handler. It's guaranteed that "size" never
-// points to NULL.
+/**
+ * @brief   Gets the storage size in bytes.
+ *
+ * @note    This is a CAmkES RPC interface handler. It's guaranteed that
+ *          "size" never points to NULL.
+ *
+ * @return  An error code.
+ *
+ * @retval  OS_ERROR_DEVICE_NOT_PRESENT - SD card is not present in the slot.
+ * @retval  OS_ERROR_INVALID_STATE      - Initialization was unsuccessful.
+ * @retval  OS_SUCCESS                  - `size` is assigned.
+ */
 OS_Error_t
 NONNULL_ALL
 storage_rpc_getSize(
-    off_t* const size)
+    off_t* const size /**< [out] The size of the storage in bytes. */)
 {
     OS_Error_t rslt = checkInit(&ctx);
     if (OS_SUCCESS != rslt)
@@ -649,12 +708,28 @@ storage_rpc_getSize(
 
 
 //------------------------------------------------------------------------------
-// This is a CAmkES RPC interface handler. It's guaranteed that "blockSize"
-// never points to NULL.
+/**
+ * @brief   Gets the storage block size in bytes.
+ *
+ * @note    This driver only allows block-wise operation thus offset and size
+ *          must be adjusted accordingly to this parameter.
+ *
+ * @note    This is a CAmkES RPC interface handler. It's guaranteed that
+ *          "blockSize" never points to NULL.
+ *
+ * @note    Block cannot be larger than what we can address in the memory
+ *          thus it's type shall be `size_t`.
+ *
+ * @return  An error code.
+ *
+ * @retval  OS_ERROR_DEVICE_NOT_PRESENT - SD card is not present in the slot.
+ * @retval  OS_ERROR_INVALID_STATE      - Initialization was unsuccessful.
+ * @retval  OS_SUCCESS                  - `blockSize` is assigned.
+ */
 OS_Error_t
 NONNULL_ALL
 storage_rpc_getBlockSize(
-    size_t* const blockSize)
+    size_t* const blockSize /**< [out] The size of the block in bytes. */)
 {
     OS_Error_t rslt = checkInit(&ctx);
     if (OS_SUCCESS != rslt)
@@ -673,12 +748,26 @@ storage_rpc_getBlockSize(
 
 
 //------------------------------------------------------------------------------
-// This is a CAmkES RPC interface handler. It's guaranteed that "flags" never
-// points to NULL.
+/**
+ * @brief   Gets the state of the storage.
+ *
+ * This function can be e.g. for detecting if the card is present in the slot.
+ *
+ * @note    This is a CAmkES RPC interface handler. It's guaranteed that
+ *          "flags" never points to NULL.
+ *
+ * @return  An error code.
+ *
+ * @retval  OS_ERROR_DEVICE_NOT_PRESENT - SD card is not present in the slot.
+ * @retval  OS_ERROR_INVALID_STATE      - Initialization was unsuccessful.
+ * @retval  OS_ERROR_ACCESS_DENIED      - Failed to lock or unlock the mutex.
+ * @retval  OS_SUCCESS                  - `flags` were assigned.
+ */
 OS_Error_t
 NONNULL_ALL
 storage_rpc_getState(
-    uint32_t* flags)
+    uint32_t* flags /**< [out] Implementation specific flags marking the
+                               state.*/)
 {
     *flags = 0U;
 
