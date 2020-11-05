@@ -17,7 +17,7 @@ endif()
 #
 # Declare SdHostController CAmkES Component
 #
-function(DeclareCAmkESComponent_SdHostController
+function(SdHostController_DeclareCAmkESComponent
     name
 )
 
