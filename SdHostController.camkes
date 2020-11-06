@@ -3,6 +3,14 @@
 /**
  * @file
  * @brief   Driver for the Secure Digital Host Controller
+ *
+ * to be used as:
+ *
+ *      #include "SdHostController/SdHostController.camkes"
+ *
+ *      SdHostController_COMPONENT_DECLARE(SdHostController)
+ *      SdHostController_HW_COMPONENT_DECLARE(SdHostController_HW)
+ *
  */
 
 /** @cond SKIP_IMPORTS */
