@@ -8,8 +8,8 @@
  *
  *      #include "SdHostController/SdHostController.camkes"
  *
- *      SdHostController_COMPONENT_DECLARE(SdHostController)
- *      SdHostController_HW_COMPONENT_DECLARE(SdHostController_HW)
+ *      SdHostController_COMPONENT_DEFINE(SdHostController)
+ *      SdHostController_HW_COMPONENT_DEFINE(SdHostController_HW)
  *
  */
 
@@ -27,7 +27,7 @@ import <if_OS_Storage.camkes>;
  *
  * @param   _name_ - [in] Component's type name.
  */
-#define SdHostController_HW_COMPONENT_DECLARE( \
+#define SdHostController_HW_COMPONENT_DEFINE( \
     _name_) \
     \
     component _name_ { \
@@ -43,7 +43,7 @@ import <if_OS_Storage.camkes>;
  *
  * @param   _name_ - [in] Component's type name.
  */
-#define SdHostController_COMPONENT_DECLARE( \
+#define SdHostController_COMPONENT_DEFINE( \
     _name_) \
     \
     component _name_ { \
