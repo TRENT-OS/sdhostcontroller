@@ -13,6 +13,8 @@
  *
  */
 
+#pragma once
+
 /** @cond SKIP_IMPORTS */
 import <if_OS_Storage.camkes>;
 /** @endcond */
