@@ -279,6 +279,13 @@ post_init(void)
         Bitmap_SET_BIT(ctx.initFailBitmap, InitFailBit_SDIO);
         return;
     }
+
+    // The Card detection pin setup is not supported yet on the i.MX6 SoloX, which
+    // leads to the problem that calling the present state function will always
+    // result in card not present, even if a card is inserted. Until this
+    // functionality is available, this check will be skipped for this
+    // particular platform.
+#ifndef CONFIG_PLAT_NITROGEN6SX
     // Check SD card presence
     if (!(sdio_get_present_state(&ctx.sdio) & PRES_STATE_CINST))
     {
@@ -286,6 +293,7 @@ post_init(void)
         Debug_LOG_INFO("%s: memory card not inserted", __func__);
         return;
     }
+#endif
 
     Debug_LOG_DEBUG("Initializing SdHostController...");
 
@@ -789,6 +797,15 @@ storage_rpc_getState(
     {
         Bitmap_SET_BIT(*flags, OS_Storage_StateFlag_MEDIUM_PRESENT);
     }
+
+// The Card detection pin setup is not supported yet on the i.MX6 SoloX, which
+// leads to the problem that calling the present state function will always
+// result in card not present, even if a card is inserted. Until this
+// functionality is available, the call to the getState() function will always
+// return card present for the i.MX6 SoloX.
+#ifdef CONFIG_PLAT_NITROGEN6SX
+    Bitmap_SET_BIT(*flags, OS_Storage_StateFlag_MEDIUM_PRESENT);
+#endif
 
     if (0 != clientMux_unlock())
     {
