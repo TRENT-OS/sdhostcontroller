@@ -664,7 +664,7 @@ storage_rpc_read(
  * @note    This is a CAmkES RPC interface handler. It's guaranteed that
  *          "erased" never points to NULL.
  *
- * @todo    SEOS-1817 was created to investigate possible implementations.
+ * @todo    Investigate possible implementations.
  *
  * @return  An error code.
  *
