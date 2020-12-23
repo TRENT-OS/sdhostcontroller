@@ -30,7 +30,9 @@ function(SdHostController_DeclareCAmkESComponent
             -Werror
         LIBS
             os_core_api
-            os_libs
+            lib_debug
+            lib_compiler
+            lib_util
             sdhcdrivers
     )
 

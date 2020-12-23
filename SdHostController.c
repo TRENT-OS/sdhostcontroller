@@ -9,10 +9,10 @@
 #include "OS_Dataport.h"
 #include "interfaces/if_OS_Storage.h"
 
-#include "LibDebug/Debug.h"
-#include "LibUtil/Bitmap.h"
+#include "lib_debug/Debug.h"
+#include "lib_util/Bitmap.h"
 #include "sdhc/mmc.h"
-#include "compiler.h"
+#include "lib_compiler/compiler.h"
 
 #include <stddef.h>
 #include <string.h>
