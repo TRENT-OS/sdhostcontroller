@@ -170,9 +170,9 @@ void writeAndRead()
     }
 
     // Verifying the read content:
-    for(size_t i; i < dataSz; ++i)
+    for(size_t i = 0; i < dataSz; ++i)
     {
-        if(writePattern == sdhc_storage_port[i])
+        if(writePattern != sdhc_storage_port[i])
         {
             // Shall never happen!
         }
