@@ -32,7 +32,7 @@ function(SdHostController_DeclareCAmkESComponent
             os_core_api
             lib_debug
             lib_compiler
-            lib_util
+            lib_utils
             sdhcdrivers
     )
 

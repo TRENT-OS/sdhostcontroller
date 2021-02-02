@@ -10,7 +10,7 @@
 #include "interfaces/if_OS_Storage.h"
 
 #include "lib_debug/Debug.h"
-#include "lib_util/Bitmap.h"
+#include "lib_utils/Bitmap.h"
 #include "sdhc/mmc.h"
 #include "lib_compiler/compiler.h"
 
