@@ -14,6 +14,11 @@
 #include "sdhc/mmc.h"
 #include "lib_compiler/compiler.h"
 
+#include "plat/rpi3/plat_defaults.h"
+#ifdef RASPPI
+    #include "plat/rpi3/bcm2837_gpio.h"
+#endif
+
 #include <stddef.h>
 #include <string.h>
 
@@ -259,6 +264,20 @@ void
 post_init(void)
 {
     ctx.initFailBitmap = 0;
+
+#ifdef RASPPI
+    bcm2837_gpio_init(gpio);
+    for (unsigned i = 0; i < 6; i++)
+    {
+		bcm2837_gpio_fsel(RPI_GPIO_P34 + i,BCM2837_GPIO_FSEL_INPT);
+		bcm2837_gpio_fsel(RPI_GPIO_P48 + i,BCM2837_GPIO_FSEL_INPT);
+    }
+    Debug_LOG_DEBUG("Routing SD to Arasan.");
+    for (unsigned i = 0; i < 6; i++)
+    {
+		bcm2837_gpio_fsel(RPI_GPIO_P48 + i,BCM2837_GPIO_FSEL_ALT3);
+    }
+#endif
 
     int rslt = camkes_io_ops(&ctx.io_ops);
     if (0 != rslt)

@@ -37,6 +37,8 @@ import <if_OS_Storage.camkes>;
         hardware; \
         \
         dataport  Buf   regBase; \
+        dataport  Buf   mailbox; \
+        dataport  Buf   gpio; \
         emits     IRQ   irq; \
     }
 
@@ -51,6 +53,8 @@ import <if_OS_Storage.camkes>;
     \
     component _name_ { \
         dataport  Buf               regBase; \
+        dataport  Buf               mailbox; \
+        dataport  Buf               gpio; \
         consumes  IRQ               irq; \
         has       mutex             clientMux; \
         \
@@ -78,6 +82,18 @@ import <if_OS_Storage.camkes>;
         _inst_drv_ ## _inst_hw_ ## _mmio( \
             from    _inst_drv_.regBase, \
             to      _inst_hw_.regBase \
+        ); \
+    \
+    connection  seL4HardwareMMIO \
+        _inst_drv_ ## _mailbox_ ## _mmio( \
+            from    _inst_drv_.mailbox, \
+            to      _inst_hw_.mailbox \
+        ); \
+    \
+    connection  seL4HardwareMMIO \
+        _inst_drv_ ## _gpio_ ## _mmio( \
+            from    _inst_drv_.gpio, \
+            to      _inst_hw_.gpio\
         ); \
     \
     connection  seL4HardwareInterrupt \
@@ -162,4 +178,14 @@ import <if_OS_Storage.camkes>;
     \
     _inst_.regBase_paddr  = SDHC ## _idx_ ## _PADDR; \
     _inst_.regBase_size   = SDHC ## _idx_ ## _SIZE; \
+    _inst_.mailbox_paddr  = MAILBOX_PADDR; \
+    _inst_.mailbox_size   = MAILBOX_SIZE; \
+    _inst_.gpio_paddr     = GPIO_PADDR; \
+    _inst_.gpio_size      = GPIO_SIZE; \
     _inst_.irq_irq_number = SDHC ## _idx_ ## _IRQ;
+
+#define CONFIGURE_INSTANCE_SD_DRV( \
+            _inst_drv_, \
+            _dma_size_) \
+    \
+    _inst_drv_.dma_pool  = _dma_size_;

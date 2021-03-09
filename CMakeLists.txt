@@ -25,6 +25,7 @@ function(SdHostController_DeclareCAmkESComponent
         ${name}
         SOURCES
             ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/SdHostController.c
+            ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/plat/${PLATFORM}/bcm2837_gpio.c
         C_FLAGS
             -Wall
             -Werror
