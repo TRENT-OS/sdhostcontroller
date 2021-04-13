@@ -14,9 +14,9 @@
 #include "sdhc/mmc.h"
 #include "lib_compiler/compiler.h"
 
-#include "plat/rpi3/plat_defaults.h"
+#include "plat/rpi4/plat_defaults.h"
 #ifdef RASPPI
-    #include "plat/rpi3/bcm2837_gpio.h"
+    #include "plat/rpi4/bcm2837_gpio.h"
 #endif
 
 #include <stddef.h>
