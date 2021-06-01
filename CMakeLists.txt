@@ -1,7 +1,7 @@
 #
 # SdHostController driver
 #
-# Copyright (C) 2020, HENSOLDT Cyber GmbH
+# Copyright (C) 2020-2021, HENSOLDT Cyber GmbH
 #
 
 cmake_minimum_required(VERSION 3.17)
@@ -25,6 +25,11 @@ function(SdHostController_DeclareCAmkESComponent
         ${name}
         SOURCES
             ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/SdHostController.c
+            ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/mmc.c
+            ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/sdhc.c
+            ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/plat/${KernelARMPlatform}/plat_sdio.c
+        INCLUDES
+            ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/plat/${KernelARMPlatform}
         C_FLAGS
             -Wall
             -Werror
@@ -33,7 +38,6 @@ function(SdHostController_DeclareCAmkESComponent
             lib_debug
             lib_compiler
             lib_utils
-            sdhcdrivers
     )
 
 endfunction()
