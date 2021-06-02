@@ -1,4 +1,4 @@
-/* Copyright (C) 2020, Hensoldt Cyber GmbH */
+/* Copyright (C) 2020, HENSOLDT Cyber GmbH */
 /**
  * @file
  * @brief Platform configuration defaults for the BD-SL-i.MX6
