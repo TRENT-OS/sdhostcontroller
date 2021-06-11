@@ -1,26 +1,30 @@
-/* Copyright (C) 2020, HENSOLDT Cyber GmbH */
+/* Copyright (C) 2021, HENSOLDT Cyber GmbH */
 /**
  * @file
- * @brief Platform defaults for the i.MX6.
+ * @brief Platform defaults for the BCM2837 (RPi3 B+).
  *
 */
 
 #pragma once
 
-#define SDHC1_PADDR 0x02190000
-#define SDHC2_PADDR 0x02194000
-#define SDHC3_PADDR 0x02198000
-#define SDHC4_PADDR 0x0219C000
-
+#define SDHC1_PADDR 0x3f300000
 #define SDHC1_SIZE  0x1000
-#define SDHC2_SIZE  0x1000
-#define SDHC3_SIZE  0x1000
-#define SDHC4_SIZE  0x1000
+#define SDHC1_IRQ   126
 
-#define SDHC1_IRQ   54
-#define SDHC2_IRQ   55
-#define SDHC3_IRQ   56
-#define SDHC4_IRQ   57
+#define MAILBOX_PADDR 0x3f00b000
+#define MAILBOX_SIZE  0x1000
+
+#define GPIO_PADDR 0x3f200000
+#define GPIO_SIZE  0x1000
+
+#define RASPPI          3
+
+// Set the default port to SDHC1.
+#define SdHostController_HW_INSTANCE_CONFIGURE_BY_DEFAULT(_inst_) \
+    SdHostController_HW_INSTANCE_CONFIGURE_BY_INDEX(_inst_, 1)
+
+#define SdHostController_INSTANCE_CONFIGURE_BY_DEFAULT(_inst_) \
+    SdHostController_INSTANCE_CONFIGURE_BY_INDEX(_inst_, 1)
 
 /**
  * @brief   Declares the SDHC HW component.
@@ -34,6 +38,8 @@
         hardware; \
         \
         dataport  Buf   regBase; \
+        dataport  Buf   mailboxBase; \
+        dataport  Buf   gpioBase; \
         emits     IRQ   irq; \
     }
 
@@ -48,6 +54,8 @@
     \
     component _name_ { \
         dataport  Buf               regBase; \
+        dataport  Buf               mailboxBase; \
+        dataport  Buf               gpioBase; \
         consumes  IRQ               irq; \
         has       mutex             clientMux; \
         \
@@ -77,6 +85,18 @@
             to      _inst_hw_.regBase \
         ); \
     \
+    connection  seL4HardwareMMIO \
+        _inst_drv_ ## _mailboxBase_ ## _mmio( \
+            from    _inst_drv_.mailboxBase, \
+            to      _inst_hw_.mailboxBase \
+        ); \
+    \
+    connection  seL4HardwareMMIO \
+        _inst_drv_ ## _gpioBase_ ## _mmio( \
+            from    _inst_drv_.gpioBase, \
+            to      _inst_hw_.gpioBase \
+        ); \
+    \
     connection  seL4HardwareInterrupt \
         _inst_drv_ ## _inst_hw_ ## _irq( \
             from    _inst_hw_.irq, \
@@ -98,6 +118,16 @@
     _inst_, \
     _idx_) \
     \
-    _inst_.regBase_paddr  = SDHC ## _idx_ ## _PADDR; \
-    _inst_.regBase_size   = SDHC ## _idx_ ## _SIZE; \
-    _inst_.irq_irq_number = SDHC ## _idx_ ## _IRQ;
+    _inst_.regBase_paddr     = SDHC ## _idx_ ## _PADDR; \
+    _inst_.regBase_size      = SDHC ## _idx_ ## _SIZE; \
+    _inst_.mailboxBase_paddr = MAILBOX_PADDR; \
+    _inst_.mailboxBase_size  = MAILBOX_SIZE; \
+    _inst_.gpioBase_paddr    = GPIO_PADDR; \
+    _inst_.gpioBase_size     = GPIO_SIZE; \
+    _inst_.irq_irq_number    = SDHC ## _idx_ ## _IRQ;
+
+#define CONFIGURE_INSTANCE_SD_DRV( \
+            _inst_drv_, \
+            _dma_size_) \
+    \
+    _inst_drv_.dma_pool  = _dma_size_;

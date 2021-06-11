@@ -74,9 +74,8 @@ static int sdhc_next_cmd(sdhc_dev_t *host)
     while (((sdhc_regs_t *)host->base)->pres_state & (SDHC_PRES_STATE_CIHB | SDHC_PRES_STATE_CDIHB));
     while (((sdhc_regs_t *)host->base)->pres_state & SDHC_PRES_STATE_DLA);
 
-    /* Two commands need to have at least 8 clock cycles in between.
-     * Lets assume that the hcd will enforce this. */
-    //udelay(1000);
+    /* This delay is required in order for the RPi3 to work properly. */
+    udelay(1000);
 
     /* Write to the argument register. */
     ZF_LOGD("CMD: %d with arg %x ", cmd->index, cmd->arg);

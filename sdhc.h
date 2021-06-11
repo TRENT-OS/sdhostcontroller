@@ -62,6 +62,12 @@ sdhc_regs_t;
 #define CMD_XFR_TYP_CCCEN       (1 << 19) //Command CRC Check Enable
 #define CMD_XFR_TYP_RSPTYP_SHF  16        //Response Type Select
 #define CMD_XFR_TYP_RSPTYP_MASK 0x3       //Response Type Select
+#define CMD_XFR_TYP_MSBSEL      (1 << 5)  //Multi/Single Block Select.
+#define CMD_XFR_TYP_DTDSEL      (1 << 4)  //Data Transfer Direction Select.
+#define CMD_XFR_TYP_DDR_EN      (1 << 3)  //Dual Data Rate mode selection
+#define CMD_XFR_TYP_AC12EN      (1 << 2)  //Auto CMD12 Enable
+#define CMD_XFR_TYP_BCEN        (1 << 1)  //Block Count Enable
+#define CMD_XFR_TYP_DMAEN       (1 << 0)  //DMA Enable
 
 /* System Control Register */
 #define SYS_CTRL_INITA          (1 << 27) //Initialization Active
