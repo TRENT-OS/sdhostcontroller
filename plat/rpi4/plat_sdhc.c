@@ -78,7 +78,7 @@ static uint32_t get_clock_divider(
 	uint32_t divider;
 
 	// Get SDHC version from "Host Controller Version Register" (0xfe)
-	int sdhc_version = ((((sdhc_regs_t *)base_addr)->host_version >> 16) & 0xff);
+    int sdhc_version = ((((sdhc_regs_t *)base_addr)->host_version >> 16) & 0xff);
 	if(sdhc_version < HOST_SPEC_V3)
 	{
 		// SDHC version 2.00
@@ -130,7 +130,7 @@ int sdhc_set_clock(volatile void *base_addr, clock_mode_e clk_mode)
 	 * above, we can trust the value returned by the mailbox interface and that
 	 * there is no prescale value applied to it.
 	 */
-    uint32_t base_clock = bcm2837_get_clock_rate (&mbox, CLOCK_ID_EMMC);
+	uint32_t base_clock = bcm2711_get_clock_rate (&mbox, CLOCK_ID_EMMC2);
 
 	while ((((sdhc_regs_t *)base_addr)->pres_state & SDHC_PRES_STATE_CDIHB) ||
 		   (((sdhc_regs_t *)base_addr)->pres_state & SDHC_PRES_STATE_CIHB));
@@ -192,7 +192,13 @@ uint32_t sdhc_set_transfer_mode(sdhc_dev_t *host)
     return trans_mode;
 }
 
-void sdhc_set_voltage_level(sdhc_dev_t host)
+void sdhc_set_voltage_level(sdhc_dev_t *host)
 {
+    // Enable SD Bus Power VDD1 at 3.3V
+	uint32_t val = ((sdhc_regs_t *)host->base)->prot_ctrl;
+	val |= 0x0F << 8;
+    ((sdhc_regs_t *)host->base)->prot_ctrl = val;
+    udelay(2000);
+
     return;
 }

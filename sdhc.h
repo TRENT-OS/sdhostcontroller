@@ -214,3 +214,5 @@ int sdhc_set_clock(volatile void *base_addr, clock_mode_e clk_mode);
  * @result Return transfer bit mask.
  */
 uint32_t sdhc_set_transfer_mode(sdhc_dev_t *host);
+
+void sdhc_set_voltage_level(sdhc_dev_t *host);
