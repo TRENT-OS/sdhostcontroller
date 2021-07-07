@@ -40,6 +40,7 @@ int sdio_init(sdio_id_e id, ps_io_ops_t *io_ops, sdio_host_dev_t *dev)
         iobase = RESOURCE(io_ops, SDHC4);
         break;
     default:
+        ZF_LOGE("SDHC ID is not supported!");
         return -1;
     }
     if (iobase == NULL) {

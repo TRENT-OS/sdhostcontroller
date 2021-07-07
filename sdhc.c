@@ -754,8 +754,13 @@ static int sdhc_set_operational(sdio_host_dev_t *sdio)
     return sdhc_set_clock(host->base, CLOCK_OPERATIONAL);
 }
 
-int sdhc_init(void *iobase, const int *irq_table, int nirqs, ps_io_ops_t *io_ops,
-              sdio_host_dev_t *dev)
+int sdhc_init(
+    void *iobase,
+    const int *irq_table,
+    int nirqs,
+    ps_io_ops_t *io_ops,
+    sdio_host_dev_t *dev
+)
 {
     /* Allocate memory for SDHC structure */
     sdhc_dev_t *sdhc = (sdhc_dev_t *)malloc(sizeof(*sdhc));
