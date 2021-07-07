@@ -23,11 +23,12 @@
 #define SDHC3_IRQ   56
 #define SDHC4_IRQ   57
 
-enum sdio_id {
+typedef enum {
     SDHC1 = 1,
     SDHC2,
     SDHC3,
     SDHC4,
     NSDHC,
     SDHC_DEFAULT = SDHC4
-};
+}
+sdio_id_e;

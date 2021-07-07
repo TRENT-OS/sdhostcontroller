@@ -139,7 +139,7 @@ static inline int sdio_handle_irq(sdio_host_dev_t *sdio, int irq)
  * Returns the ID of the default SDIO device for the current platform
  * @return  The default SDIO device for the platform
  */
-enum sdio_id sdio_default_id(void);
+sdio_id_e sdio_default_id(void);
 
 /**
  * Initialises a platform sdio device
@@ -148,4 +148,4 @@ enum sdio_id sdio_default_id(void);
  * @param[out] dev    An sdio structure to populate.
  * @return            0 on success
  */
-int sdio_init(enum sdio_id id, ps_io_ops_t *io_ops, sdio_host_dev_t *dev);
+int sdio_init(sdio_id_e id, ps_io_ops_t *io_ops, sdio_host_dev_t *dev);

@@ -17,12 +17,12 @@ _sdhc_irq_table[] = {
     [SDHC4] = SDHC4_IRQ
 };
 
-enum sdio_id sdio_default_id(void)
+sdio_id_e sdio_default_id(void)
 {
     return SDHC_DEFAULT;
 }
 
-int sdio_init(enum sdio_id id, ps_io_ops_t *io_ops, sdio_host_dev_t *dev)
+int sdio_init(sdio_id_e id, ps_io_ops_t *io_ops, sdio_host_dev_t *dev)
 {
     void *iobase;
     int ret;

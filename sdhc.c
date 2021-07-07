@@ -129,11 +129,12 @@
 #define writel(v, a)  (*(volatile uint32_t*)(a) = (v))
 #define readl(a)      (*(volatile uint32_t*)(a))
 
-enum dma_mode {
+typedef enum {
     DMA_MODE_NONE = 0,
     DMA_MODE_SDMA,
     DMA_MODE_ADMA
-};
+}
+dma_mode_e;
 
 typedef enum {
     DIV_1   = 0x0,
@@ -152,7 +153,8 @@ typedef enum {
     DIV_14  = 0xd,
     DIV_15  = 0xe,
     DIV_16  = 0xf,
-} divisor;
+}
+divisor_e;
 
 /* Selecting the prescaler value varies between SDR and DDR mode. When the
  * value is set, this is accounted for with a bitshift (PRESCALER_X >> 1) */
@@ -167,18 +169,21 @@ typedef enum {
     PRESCALER_128 = 0x40,
     PRESCALER_256 = 0x80,
     PRESCALER_512 = 0x100, //Only available in DDR mode
-} sdclk_frequency_select;
+}
+sdclk_frequency_select_e;
 
 typedef enum {
     CLOCK_INITIAL = 0,
     CLOCK_OPERATIONAL
-} clock_mode;
+}
+clock_mode_e;
 
 typedef enum {
     SDCLK_TIMES_2_POW_29 = 0xf,
     SDCLK_TIMES_2_POW_28 = 0xe,
     SDCLK_TIMES_2_POW_14 = 0x0,
-} data_timeout_counter_val;
+}
+data_timeout_counter_val_e;
 
 static inline sdhc_dev_t *sdio_get_sdhc(sdio_host_dev_t *sdio)
 {
@@ -194,7 +199,7 @@ UNUSED static void print_sdhc_regs(sdhc_dev_t *host)
     }
 }
 
-static inline enum dma_mode get_dma_mode(sdhc_dev_t *host, mmc_cmd_t *cmd)
+static inline dma_mode_e get_dma_mode(sdhc_dev_t *host, mmc_cmd_t *cmd)
 {
     if (cmd->data == NULL) {
         return DMA_MODE_NONE;
@@ -599,9 +604,9 @@ static void sdhc_enable_clock(volatile void *base_addr)
 /* Set the clock divider and timeout */
 static int sdhc_set_clock_div(
     volatile void *base_addr,
-    divisor dvs_div,
-    sdclk_frequency_select sdclks_div,
-    data_timeout_counter_val dtocv)
+    divisor_e dvs_div,
+    sdclk_frequency_select_e sdclks_div,
+    data_timeout_counter_val_e dtocv)
 {
     /* make sure the clock state is stable. */
     if (readl(base_addr + PRES_STATE) & SDHC_PRES_STATE_SDSTB) {
@@ -630,7 +635,7 @@ static int sdhc_set_clock_div(
     return 0;
 }
 
-static int sdhc_set_clock(volatile void *base_addr, clock_mode clk_mode)
+static int sdhc_set_clock(volatile void *base_addr, clock_mode_e clk_mode)
 {
     int rslt = -1;
 

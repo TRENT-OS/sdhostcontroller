@@ -77,7 +77,7 @@
 #define MMC_MODE_8BIT       0x04
 #define MMC_MODE_4BIT       0x02
 
-enum mmc_rsp_type {
+typedef enum {
     MMC_RSP_TYPE_NONE = 0,
     MMC_RSP_TYPE_R1,
     MMC_RSP_TYPE_R1b,
@@ -87,20 +87,23 @@ enum mmc_rsp_type {
     MMC_RSP_TYPE_R5,
     MMC_RSP_TYPE_R5b,
     MMC_RSP_TYPE_R6,
-};
+}
+mmc_rsp_type_e;
 
-enum mmc_card_type {
+typedef enum {
     CARD_TYPE_UNKNOWN = 0,
     CARD_TYPE_MMC,
     CARD_TYPE_SD,
     CARD_TYPE_SDIO,
-};
+}
+mmc_card_type_e;
 
-enum mmc_card_status {
+typedef enum {
     CARD_STS_ACTIVE = 0,
     CARD_STS_INACTIVE,
     CARD_STS_BUSY,
-};
+}
+mmc_card_status_e;
 
 typedef struct mmc_data_s {
     uintptr_t  pbuf;
@@ -118,7 +121,7 @@ typedef struct mmc_cmd_s {
     uint32_t response[4];
     mmc_data_t *data;
     /* Type */
-    enum mmc_rsp_type rsp_type;
+    mmc_rsp_type_e rsp_type;
     /* For async handling */
     sdio_cb         cb;
     void           *token;
