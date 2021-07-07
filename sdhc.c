@@ -15,35 +15,40 @@
 #include "services.h"
 #include "mmc.h"
 
-#define DS_ADDR               0x00 //DMA System Address
-#define BLK_ATT               0x04 //Block Attributes
-#define CMD_ARG               0x08 //Command Argument
-#define CMD_XFR_TYP           0x0C //Command Transfer Type
-#define CMD_RSP0              0x10 //Command Response0
-#define CMD_RSP1              0x14 //Command Response1
-#define CMD_RSP2              0x18 //Command Response2
-#define CMD_RSP3              0x1C //Command Response3
-#define DATA_BUFF_ACC_PORT    0x20 //Data Buffer Access Port
-#define PRES_STATE            0x24 //Present State
-#define PROT_CTRL             0x28 //Protocol Control
-#define SYS_CTRL              0x2C //System Control
-#define INT_STATUS            0x30 //Interrupt Status
-#define INT_STATUS_EN         0x34 //Interrupt Status Enable
-#define INT_SIGNAL_EN         0x38 //Interrupt Signal Enable
-#define AUTOCMD12_ERR_STATUS  0x3C //Auto CMD12 Error Status
-#define HOST_CTRL_CAP         0x40 //Host Controller Capabilities
-#define WTMK_LVL              0x44 //Watermark Level
-#define MIX_CTRL              0x48 //Mixer Control
-#define FORCE_EVENT           0x50 //Force Event
-#define ADMA_ERR_STATUS       0x54 //ADMA Error Status Register
-#define ADMA_SYS_ADDR         0x58 //ADMA System Address
-#define DLL_CTRL              0x60 //DLL (Delay Line) Control
-#define DLL_STATUS            0x64 //DLL Status
-#define CLK_TUNE_CTRL_STATUS  0x68 //CLK Tuning Control and Status
-#define VEND_SPEC             0xC0 //Vendor Specific Register
-#define MMC_BOOT              0xC4 //MMC Boot Register
-#define VEND_SPEC2            0xC8 //Vendor Specific 2 Register
-#define HOST_VERSION          0xFC //Host Version (0xFE adjusted for alignment)
+typedef volatile struct sdhc_regs_s {
+    uint32_t ds_addr;               //0x00 DMA System Address
+    uint32_t blk_att;               //0x04 Block Attributes
+    uint32_t cmd_arg;               //0x08 Command Argument
+    uint32_t cmd_xfr_typ;           //0x0C Command Transfer Type
+    uint32_t cmd_rsp0;              //0x10 Command Response0
+    uint32_t cmd_rsp1;              //0x14 Command Response1
+    uint32_t cmd_rsp2;              //0x18 Command Response2
+    uint32_t cmd_rsp3;              //0x1C Command Response3
+    uint32_t data_buff_acc_port;    //0x20 Data Buffer Access Port
+    uint32_t pres_state;            //0x24 Present State
+    uint32_t prot_ctrl;             //0x28 Protocol Control
+    uint32_t sys_ctrl;              //0x2C System Control
+    uint32_t int_status;            //0x30 Interrupt Status
+    uint32_t int_status_en;         //0x34 Interrupt Status Enable
+    uint32_t int_signal_en;         //0x38 Interrupt Signal Enable
+    uint32_t autocmd12_err_status;  //0x3C Auto CMD12 Error Status
+    uint32_t host_ctrl_cap;         //0x40 Host Controller Capabilities
+    uint32_t wtmk_lvl;              //0x44 Watermark Level
+    uint64_t mix_ctrl;              //0x48 Mixer Control
+    uint32_t force_event;           //0x50 Force Event
+    uint32_t adma_err_status;       //0x54 ADMA Error Status Register
+    uint64_t adma_sys_addr;         //0x58 ADMA System Address
+    uint32_t dll_ctrl;              //0x60 DLL (Delay Line) Control
+    uint32_t dll_status;            //0x64 DLL Status
+    uint64_t clk_tune_ctrl_status;  //0x68 CLK Tuning Control and Status
+    uint32_t unused1[20];           //0x70-0xC0
+    uint32_t vend_spec;             //0xC0 Vendor Specific Register
+    uint32_t mmc_boot;              //0xC4 MMC Boot Register
+    uint64_t vend_spec2;            //0xC8 Vendor Specific 2 Register
+    uint32_t unused2[11];           //0xD0-0xFC
+    uint32_t host_version;          //0xFC Host Version (0xFE adjusted for alignment)
+}
+sdhc_regs_t;
 
 /* Block Attributes Register */
 #define BLK_ATT_BLKCNT_SHF      16        //Blocks Count For Current Transfer
@@ -126,9 +131,6 @@
 #define WTMK_LVL_WR_WML_SHF     16        //Write Watermark Level
 #define WTMK_LVL_RD_WML_SHF     0         //Read  Watermark Level
 
-#define writel(v, a)  (*(volatile uint32_t*)(a) = (v))
-#define readl(a)      (*(volatile uint32_t*)(a))
-
 typedef enum {
     DMA_MODE_NONE = 0,
     DMA_MODE_SDMA,
@@ -194,8 +196,8 @@ static inline sdhc_dev_t *sdio_get_sdhc(sdio_host_dev_t *sdio)
 UNUSED static void print_sdhc_regs(sdhc_dev_t *host)
 {
     int i;
-    for (i = DS_ADDR; i <= HOST_VERSION; i += 0x4) {
-        ZF_LOGD("%x: %X", i, readl(host->base + i));
+    for (i = offsetof(sdhc_regs_t, ds_addr); i <= offsetof(sdhc_regs_t,host_version); i += 0x4) {
+        ZF_LOGD("%x: %X", i, (*(volatile uint32_t*)(host->base + i)));
     }
 }
 
@@ -213,15 +215,13 @@ static inline dma_mode_e get_dma_mode(sdhc_dev_t *host, mmc_cmd_t *cmd)
 
 static inline int cap_sdma_supported(sdhc_dev_t *host)
 {
-    uint32_t v;
-    v = readl(host->base + HOST_CTRL_CAP);
+    uint32_t v = ((sdhc_regs_t *)host->base)->host_ctrl_cap;
     return !!(v & HOST_CTRL_CAP_DMAS);
 }
 
 static inline int cap_max_buffer_size(sdhc_dev_t *host)
 {
-    uint32_t v;
-    v = readl(host->base + HOST_CTRL_CAP);
+    uint32_t v = ((sdhc_regs_t *)host->base)->host_ctrl_cap;
     v = ((v >> HOST_CTRL_CAP_MBL_SHF) & HOST_CTRL_CAP_MBL_MASK);
     return 512 << v;
 }
@@ -241,11 +241,11 @@ static int sdhc_next_cmd(sdhc_dev_t *host)
     if (get_dma_mode(host, cmd) == DMA_MODE_NONE) {
         val |= INT_STATUS_BRR | INT_STATUS_BWR;
     }
-    writel(val, host->base + INT_STATUS_EN);
+    ((sdhc_regs_t *)host->base)->int_status_en = val;
 
     /* Check if the Host is ready for transit. */
-    while (readl(host->base + PRES_STATE) & (SDHC_PRES_STATE_CIHB | SDHC_PRES_STATE_CDIHB));
-    while (readl(host->base + PRES_STATE) & SDHC_PRES_STATE_DLA);
+    while (((sdhc_regs_t *)host->base)->pres_state & (SDHC_PRES_STATE_CIHB | SDHC_PRES_STATE_CDIHB));
+    while (((sdhc_regs_t *)host->base)->pres_state & SDHC_PRES_STATE_DLA);
 
     /* Two commands need to have at least 8 clock cycles in between.
      * Lets assume that the hcd will enforce this. */
@@ -253,19 +253,19 @@ static int sdhc_next_cmd(sdhc_dev_t *host)
 
     /* Write to the argument register. */
     ZF_LOGD("CMD: %d with arg %x ", cmd->index, cmd->arg);
-    writel(cmd->arg, host->base + CMD_ARG);
+    ((sdhc_regs_t *)host->base)->cmd_arg = cmd->arg;
 
     if (cmd->data) {
         /* Use the default timeout. */
-        val = readl(host->base + SYS_CTRL);
+        val = ((sdhc_regs_t *)host->base)->sys_ctrl;
         val &= ~(0xffUL << 16);
         val |= 0xE << 16;
-        writel(val, host->base + SYS_CTRL);
+        ((sdhc_regs_t *)host->base)->sys_ctrl = val;
 
         /* Set the DMA boundary. */
         val = (cmd->data->block_size & BLK_ATT_BLKSIZE_MASK);
         val |= (cmd->data->blocks << BLK_ATT_BLKCNT_SHF);
-        writel(val, host->base + BLK_ATT);
+        ((sdhc_regs_t *)host->base)->blk_att = val;
 
         /* Set watermark level */
         val = cmd->data->block_size / 4;
@@ -277,7 +277,7 @@ static int sdhc_next_cmd(sdhc_dev_t *host)
         } else {
             val = (val << WTMK_LVL_WR_WML_SHF);
         }
-        writel(val, host->base + WTMK_LVL);
+        ((sdhc_regs_t *)host->base)->wtmk_lvl = val;
 
         /* Set Mixer Control */
         mix_ctrl = MIX_CTRL_BCEN;
@@ -293,7 +293,7 @@ static int sdhc_next_cmd(sdhc_dev_t *host)
             /* Enable DMA */
             mix_ctrl |= MIX_CTRL_DMAEN;
             /* Set DMA address */
-            writel(cmd->data->pbuf, host->base + DS_ADDR);
+            ((sdhc_regs_t *)host->base)->ds_addr = cmd->data->pbuf;
         }
         /* Record the number of blocks to be sent */
         host->blocks_remaining = cmd->data->blocks;
@@ -307,7 +307,7 @@ static int sdhc_next_cmd(sdhc_dev_t *host)
             /* Some controllers implement MIX_CTRL as part of the XFR_TYP */
             val |= mix_ctrl;
         } else {
-            writel(mix_ctrl, host->base + MIX_CTRL);
+            ((sdhc_regs_t *)host->base)->mix_ctrl = mix_ctrl;
         }
     }
 
@@ -346,7 +346,7 @@ static int sdhc_next_cmd(sdhc_dev_t *host)
     }
 
     /* Issue the command. */
-    writel(val, host->base + CMD_XFR_TYP);
+    ((sdhc_regs_t *)host->base)->cmd_xfr_typ = val;
     return 0;
 }
 
@@ -359,10 +359,10 @@ static int sdhc_handle_irq(sdio_host_dev_t *sdio, int irq UNUSED)
     sdhc_dev_t *host = sdio_get_sdhc(sdio);
     mmc_cmd_t *cmd = host->cmd_list_head;
 
-    uint32_t int_status = readl(host->base + INT_STATUS);
+    uint32_t int_status = ((sdhc_regs_t *)host->base)->int_status;
     if (!cmd) {
         /* Clear flags */
-        writel(int_status, host->base + INT_STATUS);
+        ((sdhc_regs_t *)host->base)->int_status = int_status;
         return 0;
     }
     /** Handle errors **/
@@ -448,22 +448,22 @@ static int sdhc_handle_irq(sdio_host_dev_t *sdio, int irq UNUSED)
         /* Command complete */
         switch (cmd->rsp_type) {
         case MMC_RSP_TYPE_R2:
-            cmd->response[0] = readl(host->base + CMD_RSP0);
-            cmd->response[1] = readl(host->base + CMD_RSP1);
-            cmd->response[2] = readl(host->base + CMD_RSP2);
-            cmd->response[3] = readl(host->base + CMD_RSP3);
+            cmd->response[0] = ((sdhc_regs_t *)host->base)->cmd_rsp0;
+            cmd->response[1] = ((sdhc_regs_t *)host->base)->cmd_rsp1;
+            cmd->response[2] = ((sdhc_regs_t *)host->base)->cmd_rsp2;
+            cmd->response[3] = ((sdhc_regs_t *)host->base)->cmd_rsp3;
             break;
         case MMC_RSP_TYPE_R1b:
             if (cmd->index == MMC_STOP_TRANSMISSION) {
-                cmd->response[3] = readl(host->base + CMD_RSP3);
+                cmd->response[3] = ((sdhc_regs_t *)host->base)->cmd_rsp3;
             } else {
-                cmd->response[0] = readl(host->base + CMD_RSP0);
+                cmd->response[0] = ((sdhc_regs_t *)host->base)->cmd_rsp0;
             }
             break;
         case MMC_RSP_TYPE_NONE:
             break;
         default:
-            cmd->response[0] = readl(host->base + CMD_RSP0);
+            cmd->response[0] = ((sdhc_regs_t *)host->base)->cmd_rsp0;
         }
 
         /* If there is no data segment, the transfer is complete */
@@ -480,7 +480,7 @@ static int sdhc_handle_irq(sdio_host_dev_t *sdio, int irq UNUSED)
         assert(cmd->data->vbuf);
         assert(cmd->complete == 0);
         if (host->blocks_remaining) {
-            io_buf = (volatile uint32_t *)((void *)host->base + DATA_BUFF_ACC_PORT);
+            io_buf = (volatile uint32_t *)((void *)&((sdhc_regs_t *)host->base)->data_buff_acc_port);
             usr_buf = (uint32_t *)cmd->data->vbuf;
             if (int_status & INT_STATUS_BRR) {
                 /* Buffer Read Ready */
@@ -504,7 +504,7 @@ static int sdhc_handle_irq(sdio_host_dev_t *sdio, int irq UNUSED)
         cmd->complete = 1;
     }
     /* Clear flags */
-    writel(int_status, host->base + INT_STATUS);
+    ((sdhc_regs_t *)host->base)->int_status = int_status;
 
     /* If the transaction has finished */
     if (cmd != NULL && cmd->complete != 0) {
@@ -530,7 +530,7 @@ static int sdhc_handle_irq(sdio_host_dev_t *sdio, int irq UNUSED)
 static int sdhc_is_voltage_compatible(sdio_host_dev_t *sdio, int mv)
 {
     sdhc_dev_t *host = sdio_get_sdhc(sdio);
-    uint32_t val = readl(host->base + HOST_CTRL_CAP);
+    uint32_t val = ((sdhc_regs_t *)host->base)->host_ctrl_cap;
     if (mv == 3300 && (val & HOST_CTRL_CAP_VS33)) {
         return 1;
     } else {
@@ -585,18 +585,16 @@ static int sdhc_send_cmd(
 
 static void sdhc_enable_clock(volatile void *base_addr)
 {
-    uint32_t val;
-
-    val = readl(base_addr + SYS_CTRL);
+    uint32_t val = ((sdhc_regs_t *)base_addr)->sys_ctrl;
     val |= SYS_CTRL_CLK_INT_EN;
-    writel(val, base_addr + SYS_CTRL);
+    ((sdhc_regs_t *)base_addr)->sys_ctrl = val;
 
     do {
-        val = readl(base_addr + SYS_CTRL);
+        val = ((sdhc_regs_t *)base_addr)->sys_ctrl;
     } while (!(val & SYS_CTRL_CLK_INT_STABLE));
 
     val |= SYS_CTRL_CLK_CARD_EN;
-    writel(val, base_addr + SYS_CTRL);
+    ((sdhc_regs_t *)base_addr)->sys_ctrl = val;
 
     return;
 }
@@ -609,11 +607,11 @@ static int sdhc_set_clock_div(
     data_timeout_counter_val_e dtocv)
 {
     /* make sure the clock state is stable. */
-    if (readl(base_addr + PRES_STATE) & SDHC_PRES_STATE_SDSTB) {
-        uint32_t val = readl(base_addr + SYS_CTRL);
+    if (((sdhc_regs_t *)base_addr)->pres_state & SDHC_PRES_STATE_SDSTB) {
+        uint32_t val = ((sdhc_regs_t *)base_addr)->sys_ctrl;
 
         /* The SDCLK bit varies with Data Rate Mode. */
-        if (readl(base_addr + MIX_CTRL) & MIX_CTRL_DDR_EN) {
+        if (((sdhc_regs_t *)base_addr)->mix_ctrl & MIX_CTRL_DDR_EN) {
             val &= ~(SYS_CTRL_SDCLKS_MASK << SYS_CTRL_SDCLKS_SHF);
             val |= ((sdclks_div >> 1) << SYS_CTRL_SDCLKS_SHF);
 
@@ -626,7 +624,7 @@ static int sdhc_set_clock_div(
 
         /* Set data timeout value */
         val |= (dtocv << SYS_CTRL_DTOCV_SHF);
-        writel(val, base_addr + SYS_CTRL);
+        ((sdhc_regs_t *)base_addr)->sys_ctrl = val;
     } else {
         ZF_LOGE("The clock is unstable, unable to change it!");
         return -1;
@@ -639,7 +637,7 @@ static int sdhc_set_clock(volatile void *base_addr, clock_mode_e clk_mode)
 {
     int rslt = -1;
 
-    const bool isClkEnabled = readl(base_addr + SYS_CTRL) & SYS_CTRL_CLK_INT_EN;
+    const bool isClkEnabled = ((sdhc_regs_t *)base_addr)->sys_ctrl & SYS_CTRL_CLK_INT_EN;
     if (!isClkEnabled) {
         sdhc_enable_clock(base_addr);
     }
@@ -677,12 +675,12 @@ static int sdhc_reset(sdio_host_dev_t *sdio)
     sdhc_dev_t *host = sdio_get_sdhc(sdio);
 
     /* Reset the host */
-    uint32_t val = readl(host->base + SYS_CTRL);
+    uint32_t val = ((sdhc_regs_t *)host->base)->sys_ctrl;
     val |= SYS_CTRL_RSTA;
     /* Wait until the controller is ready */
-    writel(val, host->base + SYS_CTRL);
+    ((sdhc_regs_t *)host->base)->sys_ctrl = val;
     do {
-        val = readl(host->base + SYS_CTRL);
+        val = ((sdhc_regs_t *)host->base)->sys_ctrl;
     } while (val & SYS_CTRL_RSTA);
 
     /* Enable IRQs */
@@ -691,8 +689,8 @@ static int sdhc_reset(sdio_host_dev_t *sdio)
            | INT_STATUS_CINS  | INT_STATUS_BRR     | INT_STATUS_BWR
            | INT_STATUS_CIE   | INT_STATUS_CEBE    | INT_STATUS_CCE
            | INT_STATUS_CTOE  | INT_STATUS_TC      | INT_STATUS_CC);
-    writel(val, host->base + INT_STATUS_EN);
-    writel(val, host->base + INT_SIGNAL_EN);
+    ((sdhc_regs_t *)host->base)->int_status_en = val;
+    ((sdhc_regs_t *)host->base)->int_signal_en = val;
 
     /* Configure clock for initialization */
     sdhc_set_clock(host->base, CLOCK_INITIAL);
@@ -700,22 +698,22 @@ static int sdhc_reset(sdio_host_dev_t *sdio)
     /* TODO: Select Voltage Level */
 
     /* Set bus width */
-    val = readl(host->base + PROT_CTRL);
+    val = ((sdhc_regs_t *)host->base)->prot_ctrl;
     val |= MMC_MODE_4BIT;
-    writel(val, host->base + PROT_CTRL);
+    ((sdhc_regs_t *)host->base)->prot_ctrl = val;
 
     /* Wait until the Command and Data Lines are ready. */
-    while ((readl(host->base + PRES_STATE) & SDHC_PRES_STATE_CDIHB) ||
-           (readl(host->base + PRES_STATE) & SDHC_PRES_STATE_CIHB));
+    while ((((sdhc_regs_t *)host->base)->pres_state & SDHC_PRES_STATE_CDIHB) ||
+           (((sdhc_regs_t *)host->base)->pres_state & SDHC_PRES_STATE_CIHB));
 
     /* Send 80 clock ticks to card to power up. */
-    val = readl(host->base + SYS_CTRL);
+    val = ((sdhc_regs_t *)host->base)->sys_ctrl;
     val |= SYS_CTRL_INITA;
-    writel(val, host->base + SYS_CTRL);
-    while (readl(host->base + SYS_CTRL) & SYS_CTRL_INITA);
+    ((sdhc_regs_t *)host->base)->sys_ctrl = val;
+    while (((sdhc_regs_t *)host->base)->sys_ctrl & SYS_CTRL_INITA);
 
     /* Check if a SD card is inserted. */
-    val = readl(host->base + PRES_STATE);
+    val = ((sdhc_regs_t *)host->base)->pres_state;
     if (val & SDHC_PRES_STATE_CINST) {
         ZF_LOGD("Card Inserted");
         if (!(val & SDHC_PRES_STATE_WPSPL)) {
@@ -740,7 +738,7 @@ static int sdhc_get_nth_irq(sdio_host_dev_t *sdio, int n)
 
 static uint32_t sdhc_get_present_state_register(sdio_host_dev_t *sdio)
 {
-    return readl(sdio_get_sdhc(sdio)->base + PRES_STATE);
+    return ((sdhc_regs_t *)sdio_get_sdhc(sdio)->base)->pres_state;
 }
 
 static int sdhc_set_operational(sdio_host_dev_t *sdio)
@@ -772,7 +770,7 @@ int sdhc_init(void *iobase, const int *irq_table, int nirqs, ps_io_ops_t *io_ops
     sdhc->dalloc = &io_ops->dma_manager;
     sdhc->cmd_list_head = NULL;
     sdhc->cmd_list_tail = &sdhc->cmd_list_head;
-    sdhc->version = ((readl(sdhc->base + HOST_VERSION) >> 16) & 0xff) + 1;
+    sdhc->version = ((((sdhc_regs_t *)sdhc->base)->host_version >> 16) & 0xff) + 1;
     ZF_LOGD("SDHC version %d.00", sdhc->version);
     /* Initialise SDIO structure */
     dev->handle_irq = &sdhc_handle_irq;
@@ -784,8 +782,8 @@ int sdhc_init(void *iobase, const int *irq_table, int nirqs, ps_io_ops_t *io_ops
     dev->get_present_state = &sdhc_get_present_state_register;
     dev->priv = sdhc;
     /* Clear IRQs */
-    writel(0, sdhc->base + INT_STATUS_EN);
-    writel(0, sdhc->base + INT_SIGNAL_EN);
-    writel(readl(sdhc->base + INT_STATUS), sdhc->base + INT_STATUS);
+    ((sdhc_regs_t *)sdhc->base)->int_status_en = 0;
+    ((sdhc_regs_t *)sdhc->base)->int_signal_en = 0;
+    ((sdhc_regs_t *)sdhc->base)->int_status = ((sdhc_regs_t *)sdhc->base)->int_status;
     return 0;
 }
