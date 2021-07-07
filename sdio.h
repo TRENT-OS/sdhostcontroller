@@ -32,22 +32,21 @@
 #define SDHC_PRES_STATE_CIHB         (1 << 0)  //Command Inhibit(CMD)
 
 /* TODO turn this into sdio_cmd */
-struct mmc_cmd;
-struct sdio_host_dev;
-typedef void (*sdio_cb)(struct sdio_host_dev *sdio, int status, struct mmc_cmd *cmd, void *token);
+typedef struct mmc_cmd_s mmc_cmd_t;
+typedef struct sdio_host_dev_s sdio_host_dev_t;
+typedef void (*sdio_cb)(sdio_host_dev_t *sdio, int status, mmc_cmd_t *cmd, void *token);
 
-struct sdio_host_dev {
-    int (*reset)(struct sdio_host_dev *sdio);
-    int (*set_operational)(struct sdio_host_dev *sdio);
-    int (*send_command)(struct sdio_host_dev *sdio, struct mmc_cmd *cmd, sdio_cb cb, void *token);
-    int (*handle_irq)(struct sdio_host_dev *sdio, int irq);
-    int (*is_voltage_compatible)(struct sdio_host_dev *sdio, int mv);
-    int (*nth_irq)(struct sdio_host_dev *sdio, int n);
-    uint32_t (*get_present_state)(struct sdio_host_dev *sdio);
+struct sdio_host_dev_s {
+    int (*reset)(sdio_host_dev_t *sdio);
+    int (*set_operational)(sdio_host_dev_t *sdio);
+    int (*send_command)(sdio_host_dev_t *sdio, mmc_cmd_t *cmd, sdio_cb cb, void *token);
+    int (*handle_irq)(sdio_host_dev_t *sdio, int irq);
+    int (*is_voltage_compatible)(sdio_host_dev_t *sdio, int mv);
+    int (*nth_irq)(sdio_host_dev_t *sdio, int n);
+    uint32_t (*get_present_state)(sdio_host_dev_t *sdio);
 
     void *priv;
 };
-typedef struct sdio_host_dev sdio_host_dev_t;
 
 /**
  * Send a command to an attached device
@@ -60,7 +59,12 @@ typedef struct sdio_host_dev sdio_host_dev_t;
  * @param[in] token A token to pass, unmodified, to the provided callback function.
  * @return          1 if the provided voltage level is supported
  */
-static inline int sdio_send_command(sdio_host_dev_t *sdio, struct mmc_cmd *cmd, sdio_cb cb, void *token)
+static inline int sdio_send_command(
+    sdio_host_dev_t *sdio,
+    mmc_cmd_t *cmd,
+    sdio_cb cb,
+    void *token
+)
 {
     return sdio->send_command(sdio, cmd, cb, token);
 }

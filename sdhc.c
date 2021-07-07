@@ -180,13 +180,13 @@ typedef enum {
     SDCLK_TIMES_2_POW_14 = 0x0,
 } data_timeout_counter_val;
 
-static inline sdhc_dev_t sdio_get_sdhc(sdio_host_dev_t *sdio)
+static inline sdhc_dev_t *sdio_get_sdhc(sdio_host_dev_t *sdio)
 {
-    return (sdhc_dev_t)sdio->priv;
+    return (sdhc_dev_t *)sdio->priv;
 }
 
 /** Print uSDHC registers. */
-UNUSED static void print_sdhc_regs(struct sdhc *host)
+UNUSED static void print_sdhc_regs(sdhc_dev_t *host)
 {
     int i;
     for (i = DS_ADDR; i <= HOST_VERSION; i += 0x4) {
@@ -194,7 +194,7 @@ UNUSED static void print_sdhc_regs(struct sdhc *host)
     }
 }
 
-static inline enum dma_mode get_dma_mode(struct sdhc *host, struct mmc_cmd *cmd)
+static inline enum dma_mode get_dma_mode(sdhc_dev_t *host, mmc_cmd_t *cmd)
 {
     if (cmd->data == NULL) {
         return DMA_MODE_NONE;
@@ -206,14 +206,14 @@ static inline enum dma_mode get_dma_mode(struct sdhc *host, struct mmc_cmd *cmd)
     return DMA_MODE_SDMA;
 }
 
-static inline int cap_sdma_supported(struct sdhc *host)
+static inline int cap_sdma_supported(sdhc_dev_t *host)
 {
     uint32_t v;
     v = readl(host->base + HOST_CTRL_CAP);
     return !!(v & HOST_CTRL_CAP_DMAS);
 }
 
-static inline int cap_max_buffer_size(struct sdhc *host)
+static inline int cap_max_buffer_size(sdhc_dev_t *host)
 {
     uint32_t v;
     v = readl(host->base + HOST_CTRL_CAP);
@@ -221,9 +221,9 @@ static inline int cap_max_buffer_size(struct sdhc *host)
     return 512 << v;
 }
 
-static int sdhc_next_cmd(sdhc_dev_t host)
+static int sdhc_next_cmd(sdhc_dev_t *host)
 {
-    struct mmc_cmd *cmd = host->cmd_list_head;
+    mmc_cmd_t *cmd = host->cmd_list_head;
     uint32_t val;
     uint32_t mix_ctrl;
 
@@ -351,11 +351,10 @@ static int sdhc_next_cmd(sdhc_dev_t host)
  */
 static int sdhc_handle_irq(sdio_host_dev_t *sdio, int irq UNUSED)
 {
-    sdhc_dev_t host = sdio_get_sdhc(sdio);
-    struct mmc_cmd *cmd = host->cmd_list_head;
-    uint32_t int_status;
+    sdhc_dev_t *host = sdio_get_sdhc(sdio);
+    mmc_cmd_t *cmd = host->cmd_list_head;
 
-    int_status = readl(host->base + INT_STATUS);
+    uint32_t int_status = readl(host->base + INT_STATUS);
     if (!cmd) {
         /* Clear flags */
         writel(int_status, host->base + INT_STATUS);
@@ -525,9 +524,8 @@ static int sdhc_handle_irq(sdio_host_dev_t *sdio, int irq UNUSED)
 
 static int sdhc_is_voltage_compatible(sdio_host_dev_t *sdio, int mv)
 {
-    uint32_t val;
-    sdhc_dev_t host = sdio_get_sdhc(sdio);
-    val = readl(host->base + HOST_CTRL_CAP);
+    sdhc_dev_t *host = sdio_get_sdhc(sdio);
+    uint32_t val = readl(host->base + HOST_CTRL_CAP);
     if (mv == 3300 && (val & HOST_CTRL_CAP_VS33)) {
         return 1;
     } else {
@@ -535,9 +533,14 @@ static int sdhc_is_voltage_compatible(sdio_host_dev_t *sdio, int mv)
     }
 }
 
-static int sdhc_send_cmd(sdio_host_dev_t *sdio, struct mmc_cmd *cmd, sdio_cb cb, void *token)
+static int sdhc_send_cmd(
+    sdio_host_dev_t *sdio,
+    mmc_cmd_t *cmd,
+    sdio_cb cb,
+    void *token
+)
 {
-    sdhc_dev_t host = sdio_get_sdhc(sdio);
+    sdhc_dev_t *host = sdio_get_sdhc(sdio);
     int ret;
 
     /* Initialise callbacks */
@@ -666,11 +669,10 @@ static int sdhc_set_clock(volatile void *base_addr, clock_mode clk_mode)
 /** Software Reset */
 static int sdhc_reset(sdio_host_dev_t *sdio)
 {
-    sdhc_dev_t host = sdio_get_sdhc(sdio);
-    uint32_t val;
+    sdhc_dev_t *host = sdio_get_sdhc(sdio);
 
     /* Reset the host */
-    val = readl(host->base + SYS_CTRL);
+    uint32_t val = readl(host->base + SYS_CTRL);
     val |= SYS_CTRL_RSTA;
     /* Wait until the controller is ready */
     writel(val, host->base + SYS_CTRL);
@@ -723,7 +725,7 @@ static int sdhc_reset(sdio_host_dev_t *sdio)
 
 static int sdhc_get_nth_irq(sdio_host_dev_t *sdio, int n)
 {
-    sdhc_dev_t host = sdio_get_sdhc(sdio);
+    sdhc_dev_t *host = sdio_get_sdhc(sdio);
     if (n < 0 || n >= host->nirqs) {
         return -1;
     } else {
@@ -736,7 +738,7 @@ static uint32_t sdhc_get_present_state_register(sdio_host_dev_t *sdio)
     return readl(sdio_get_sdhc(sdio)->base + PRES_STATE);
 }
 
-static int sdhc_set_operational(struct sdio_host_dev *sdio)
+static int sdhc_set_operational(sdio_host_dev_t *sdio)
 {
     /*
      * Set the clock to a higher frequency for the operational state.
@@ -745,16 +747,15 @@ static int sdhc_set_operational(struct sdio_host_dev *sdio)
      * host controller could be driven with a higher rate, therefore the
      * operational clock settings are chosen rather conservative.
      */
-    sdhc_dev_t host = sdio_get_sdhc(sdio);
+    sdhc_dev_t *host = sdio_get_sdhc(sdio);
     return sdhc_set_clock(host->base, CLOCK_OPERATIONAL);
 }
 
 int sdhc_init(void *iobase, const int *irq_table, int nirqs, ps_io_ops_t *io_ops,
               sdio_host_dev_t *dev)
 {
-    sdhc_dev_t sdhc;
     /* Allocate memory for SDHC structure */
-    sdhc = (sdhc_dev_t)malloc(sizeof(*sdhc));
+    sdhc_dev_t *sdhc = (sdhc_dev_t *)malloc(sizeof(*sdhc));
     if (!sdhc) {
         ZF_LOGE("Not enough memory!");
         return -1;

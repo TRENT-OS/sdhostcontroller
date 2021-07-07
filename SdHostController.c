@@ -56,7 +56,7 @@ typedef struct SdHostController
 {
     sdio_host_dev_t     sdio;
     ps_io_ops_t         io_ops;
-    mmc_card_t          mmc_card;
+    mmc_card_t          *mmc_card;
     OS_Dataport_t       port_storage;
     Bitmap8             initFailBitmap;
 }
@@ -193,7 +193,7 @@ verifyParameters(
 
 static
 off_t
-getStorageSize(mmc_card_t mmcCard)
+getStorageSize(mmc_card_t *mmcCard)
 {
     Debug_LOG_TRACE("%s: getting the card size...", __func__);
 
@@ -217,7 +217,7 @@ getStorageSize(mmc_card_t mmcCard)
 
 static
 size_t
-getBlockSize(mmc_card_t mmcCard)
+getBlockSize(mmc_card_t *mmcCard)
 {
     Debug_LOG_TRACE("%s: getting the card's block size...", __func__);
 

@@ -15,11 +15,12 @@
 #define CSD_VERSION_1       0
 #define CSD_VERSION_2_AND_3 1
 
-struct mmc_completion_token {
-    struct mmc_card *card;
+typedef struct mmc_completion_token_s {
+    mmc_card_t *card;
     mmc_cb cb;
     void *token;
-};
+}
+mmc_completion_token_t;
 
 static uint32_t slice_bits(uint32_t *val, int start, int size)
 {
@@ -52,7 +53,7 @@ static uint32_t slice_bits(uint32_t *val, int start, int size)
     return ret;
 }
 
-static int mmc_decode_cid(mmc_card_t mmc_card, struct cid *cid)
+static int mmc_decode_cid(mmc_card_t *mmc_card, cid_t *cid)
 {
     if (mmc_card == NULL || cid == NULL) {
         return -1;
@@ -83,7 +84,7 @@ static int mmc_decode_cid(mmc_card_t mmc_card, struct cid *cid)
     return 0;
 }
 
-static int mmc_decode_csd(mmc_card_t mmc_card, struct csd *csd)
+static int mmc_decode_csd(mmc_card_t *mmc_card, csd_t *csd)
 {
     if (mmc_card == NULL || csd == NULL) {
         return -1;
@@ -114,9 +115,9 @@ static int mmc_decode_csd(mmc_card_t mmc_card, struct csd *csd)
     return 0;
 }
 
-static struct mmc_cmd *mmc_cmd_new(uint32_t index, uint32_t arg, int rsp_type)
+static mmc_cmd_t *mmc_cmd_new(uint32_t index, uint32_t arg, int rsp_type)
 {
-    struct mmc_cmd *cmd;
+    mmc_cmd_t *cmd;
     cmd = malloc(sizeof(*cmd));
     if (cmd) {
         /* Command */
@@ -133,12 +134,18 @@ static struct mmc_cmd *mmc_cmd_new(uint32_t index, uint32_t arg, int rsp_type)
     return cmd;
 }
 
-static int mmc_cmd_add_data(struct mmc_cmd *cmd, void *vbuf, uintptr_t pbuf, uint32_t addr,
-                            uint32_t block_size, uint32_t blocks)
+static int mmc_cmd_add_data(
+    mmc_cmd_t *cmd,
+    void *vbuf,
+    uintptr_t pbuf,
+    uint32_t addr,
+    uint32_t block_size,
+    uint32_t blocks
+)
 {
-    struct mmc_data *d;
+    mmc_data_t *d;
     assert(cmd->data == NULL);
-    d = (struct mmc_data *)malloc(sizeof(*d));
+    d = (mmc_data_t *)malloc(sizeof(*d));
     if (d) {
         d->pbuf = pbuf;
         d->vbuf = vbuf;
@@ -152,7 +159,7 @@ static int mmc_cmd_add_data(struct mmc_cmd *cmd, void *vbuf, uintptr_t pbuf, uin
     }
 }
 
-static void mmc_cmd_destroy(struct mmc_cmd *cmd)
+static void mmc_cmd_destroy(mmc_cmd_t *cmd)
 {
     if (cmd->data) {
         free(cmd->data);
@@ -160,10 +167,14 @@ static void mmc_cmd_destroy(struct mmc_cmd *cmd)
     free(cmd);
 }
 
-static struct mmc_completion_token *mmc_new_completion_token(mmc_card_t mmc_card, mmc_cb cb, void *token)
+static mmc_completion_token_t *mmc_new_completion_token(
+    mmc_card_t *mmc_card,
+    mmc_cb cb,
+    void *token
+)
 {
-    struct mmc_completion_token *t;
-    t = (struct mmc_completion_token *)malloc(sizeof(*t));
+    mmc_completion_token_t *t;
+    t = (mmc_completion_token_t *)malloc(sizeof(*t));
     if (t) {
         t->card = mmc_card;
         t->cb = cb;
@@ -172,7 +183,7 @@ static struct mmc_completion_token *mmc_new_completion_token(mmc_card_t mmc_card
     return t;
 }
 
-static void mmc_completion_token_destroy(struct mmc_completion_token *t)
+static void mmc_completion_token_destroy(mmc_completion_token_t *t)
 {
     free(t);
 }
@@ -180,9 +191,9 @@ static void mmc_completion_token_destroy(struct mmc_completion_token *t)
 /**
  * MMC/SD/SDIO card registry.
  */
-static int mmc_card_registry(mmc_card_t card)
+static int mmc_card_registry(mmc_card_t *card)
 {
-    struct mmc_cmd cmd = {.data = NULL};
+    mmc_cmd_t cmd = {.data = NULL};
     int ret;
 
     /* Get card ID */
@@ -205,7 +216,7 @@ static int mmc_card_registry(mmc_card_t card)
     cmd.response[0] = (cmd.response[0] << 8);
     memcpy(card->raw_cid, cmd.response, sizeof(card->raw_cid));
 
-    struct cid card_id;
+    cid_t card_id;
     mmc_decode_cid(card, &card_id);
 
     /* Retrieve RCA number. */
@@ -266,9 +277,9 @@ static int mmc_card_registry(mmc_card_t card)
 /**
  * Card voltage validation.
  */
-static int mmc_voltage_validation(mmc_card_t card)
+static int mmc_voltage_validation(mmc_card_t *card)
 {
-    struct mmc_cmd cmd = {.data = NULL};
+    mmc_cmd_t cmd = {.data = NULL};
     int voltage;
     int ret;
 
@@ -336,10 +347,10 @@ static int mmc_voltage_validation(mmc_card_t card)
     return 0;
 }
 
-static int mmc_reset(mmc_card_t card)
+static int mmc_reset(mmc_card_t *card)
 {
     /* Reset the card with CMD0 */
-    struct mmc_cmd cmd = {.data = NULL};
+    mmc_cmd_t cmd = {.data = NULL};
     cmd.index = MMC_GO_IDLE_STATE;
     cmd.arg = 0;
     cmd.rsp_type = MMC_RSP_TYPE_NONE;
@@ -353,13 +364,17 @@ static int mmc_reset(mmc_card_t card)
     return 0;
 }
 
-static void mmc_blockop_completion_cb(struct sdio_host_dev *sdio, int stat, struct mmc_cmd *cmd,
-                                      void *token)
+static void mmc_blockop_completion_cb(
+    sdio_host_dev_t *sdio,
+    int stat,
+    mmc_cmd_t *cmd,
+    void *token
+)
 {
-    struct mmc_completion_token *t;
+    mmc_completion_token_t *t;
     size_t bytes;
 
-    t = (struct mmc_completion_token *)token;
+    t = (mmc_completion_token_t *)token;
     if (stat == 0) {
         bytes = cmd->data->block_size * cmd->data->blocks;
     } else {
@@ -372,12 +387,12 @@ static void mmc_blockop_completion_cb(struct sdio_host_dev *sdio, int stat, stru
     mmc_completion_token_destroy(t);
 }
 
-int mmc_init(sdio_host_dev_t *sdio, ps_io_ops_t *io_ops, mmc_card_t *mmc_card)
+int mmc_init(sdio_host_dev_t *sdio, ps_io_ops_t *io_ops, mmc_card_t **mmc_card)
 {
-    mmc_card_t mmc;
+    mmc_card_t *mmc;
 
     /* Allocate the mmc card structure */
-    mmc = (mmc_card_t)malloc(sizeof(*mmc));
+    mmc = (mmc_card_t *)malloc(sizeof(*mmc));
     assert(mmc);
     if (!mmc) {
         return -1;
@@ -422,7 +437,7 @@ int mmc_init(sdio_host_dev_t *sdio, ps_io_ops_t *io_ops, mmc_card_t *mmc_card)
 
 static
 long transfer_data(
-    mmc_card_t mmc_card,
+    mmc_card_t *mmc_card,
     unsigned long start,
     int nblocks,
     void *vbuf,
@@ -431,7 +446,7 @@ long transfer_data(
     void *token,
     uint32_t command)
 {
-    struct mmc_cmd *cmd;
+    mmc_cmd_t *cmd;
     const int block_size = mmc_block_size(mmc_card);
 
     /* Determine command argument */
@@ -456,7 +471,7 @@ long transfer_data(
     }
 
     long ret = -1;
-    struct mmc_completion_token *mmc_token = NULL;
+    mmc_completion_token_t *mmc_token = NULL;
 
     /* Add a data segment */
     ret = mmc_cmd_add_data(cmd, vbuf, pbuf, start, block_size, nblocks);
@@ -498,8 +513,15 @@ exit_transfer_data:
     return is_success ? bytes_transferred : ret;
 }
 
-long mmc_block_read(mmc_card_t mmc_card, unsigned long start,
-                    int nblocks, void *vbuf, uintptr_t pbuf, mmc_cb cb, void *token)
+long mmc_block_read(
+    mmc_card_t *mmc_card,
+    unsigned long start,
+    int nblocks,
+    void *vbuf,
+    uintptr_t pbuf,
+    mmc_cb cb,
+    void *token
+)
 {
     return transfer_data(
                mmc_card,
@@ -512,8 +534,15 @@ long mmc_block_read(mmc_card_t mmc_card, unsigned long start,
                MMC_READ_SINGLE_BLOCK);
 }
 
-long mmc_block_write(mmc_card_t mmc_card, unsigned long start, int nblocks,
-                     const void *vbuf, uintptr_t pbuf, mmc_cb cb, void *token)
+long mmc_block_write(
+    mmc_card_t *mmc_card,
+    unsigned long start,
+    int nblocks,
+    const void *vbuf,
+    uintptr_t pbuf,
+    mmc_cb cb,
+    void *token
+)
 {
     // vbuf's `const` gets dropped during the cast as the underlying layer
     // accepts only non-const buffer, however it is ok, as we are sending the
@@ -529,10 +558,10 @@ long mmc_block_write(mmc_card_t mmc_card, unsigned long start, int nblocks,
                MMC_WRITE_BLOCK);
 }
 
-long long mmc_card_capacity(mmc_card_t mmc_card)
+long long mmc_card_capacity(mmc_card_t *mmc_card)
 {
     int ret;
-    struct csd csd;
+    csd_t csd;
 
     ret = mmc_decode_csd(mmc_card, &csd);
     if (ret) {
@@ -555,12 +584,12 @@ long long mmc_card_capacity(mmc_card_t mmc_card)
 }
 
 
-int mmc_nth_irq(mmc_card_t mmc, int n)
+int mmc_nth_irq(mmc_card_t *mmc, int n)
 {
     return host_nth_irq(mmc, n);
 }
 
-int mmc_handle_irq(mmc_card_t mmc, int irq)
+int mmc_handle_irq(mmc_card_t *mmc, int irq)
 {
     return host_handle_irq(mmc, irq);
 }

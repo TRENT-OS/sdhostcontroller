@@ -102,31 +102,33 @@ enum mmc_card_status {
     CARD_STS_BUSY,
 };
 
-struct mmc_data {
+typedef struct mmc_data_s {
     uintptr_t  pbuf;
     void      *vbuf;
     uint32_t   data_addr;
     uint32_t   block_size;
     uint32_t   blocks;
-};
+}
+mmc_data_t;
 
-struct mmc_cmd {
+typedef struct mmc_cmd_s {
     /* Data */
     uint32_t index;
     uint32_t arg;
     uint32_t response[4];
-    struct mmc_data *data;
+    mmc_data_t *data;
     /* Type */
     enum mmc_rsp_type rsp_type;
     /* For async handling */
     sdio_cb         cb;
     void           *token;
     /* For queueing */
-    struct mmc_cmd *next;
+    struct mmc_cmd_s *next;
     int complete;
-};
+}
+mmc_cmd_t;
 
-struct cid {
+typedef struct cid_s {
     uint8_t reserved;
     uint8_t manfid;
     union {
@@ -146,17 +148,20 @@ struct cid {
             uint16_t date;
         } sd_cid;
     };
-} __attribute__((packed));
+}
+__attribute__((packed))
+cid_t;
 
-struct csd {
+typedef struct csd_s {
     uint8_t structure;
     uint8_t tran_speed;
     uint8_t read_bl_len;
     uint32_t c_size;
     uint8_t  c_size_mult;
-};
+}
+csd_t;
 
-struct mmc_card {
+typedef struct mmc_card_s {
     uint32_t ocr;
     uint32_t raw_cid[4];
     uint32_t raw_csd[4];
@@ -167,18 +172,17 @@ struct mmc_card {
     uint32_t version;
     uint32_t high_capacity;
     uint32_t status;
-    ps_dma_man_t *dalloc;
+    const ps_dma_man_t *dalloc;
     sdio_host_dev_t *sdio;
-};
+}
+mmc_card_t;
 
-typedef struct mmc_card *mmc_card_t;
-
-typedef void (*mmc_cb)(mmc_card_t mmc_card, int status, size_t bytes_transferred, void *token);
+typedef void (*mmc_cb)(mmc_card_t *mmc_card, int status, size_t bytes_transferred, void *token);
 
 //------------------------------------------------------------------------------
 // MMC specific functions
 
-static inline size_t mmc_block_size(mmc_card_t mmc_card)
+static inline size_t mmc_block_size(mmc_card_t *mmc_card)
 {
     return 512;
 }
@@ -193,7 +197,7 @@ static inline size_t mmc_block_size(mmc_card_t mmc_card)
  *                           associated with the provided id.
  * @return                   0 on success.
  */
-int mmc_init(sdio_host_dev_t *sdio, ps_io_ops_t *io_ops, mmc_card_t *mmc_card);
+int mmc_init(sdio_host_dev_t *sdio, ps_io_ops_t *io_ops, mmc_card_t **mmc_card);
 
 /** Read blocks from the MMC
  * The client may use either physical or virtual address for the transfer depending
@@ -210,8 +214,15 @@ int mmc_init(sdio_host_dev_t *sdio, ps_io_ops_t *io_ops, mmc_card_t *mmc_card);
 
  * @return              The number of bytes read, negative on failure.
  */
-long mmc_block_read(mmc_card_t mmc_card, unsigned long start_block, int nblocks,
-                    void *vbuf, uintptr_t pbuf, mmc_cb cb, void *token);
+long mmc_block_read(
+    mmc_card_t *mmc_card,
+    unsigned long start_block,
+    int nblocks,
+    void *vbuf,
+    uintptr_t pbuf,
+    mmc_cb cb,
+    void *token
+);
 
 /** Write blocks to the MMC
  * The client may use either physical or virtual address for the transfer depending
@@ -227,8 +238,15 @@ long mmc_block_read(mmc_card_t mmc_card, unsigned long start_block, int nblocks,
  * @param[in] token     A token to pass, unmodified, to the provided callback function.
  * @return              The number of bytes read, negative on failure.
  */
-long mmc_block_write(mmc_card_t mmc_card, unsigned long start_block, int nblocks,
-                     const void *vbuf, uintptr_t pbuf, mmc_cb cb, void *token);
+long mmc_block_write(
+    mmc_card_t *mmc_card,
+    unsigned long start_block,
+    int nblocks,
+    const void *vbuf,
+    uintptr_t pbuf,
+    mmc_cb cb,
+    void *token
+);
 
 /**
  * Returns the nth IRQ that this underlying device generates
@@ -236,7 +254,7 @@ long mmc_block_write(mmc_card_t mmc_card, unsigned long start_block, int nblocks
  * @param[in] n    Index of the desired IRQ.
  * @return         The IRQ number, or -1 if n is invalid
  */
-int mmc_nth_irq(mmc_card_t mmc, int n);
+int mmc_nth_irq(mmc_card_t *mmc, int n);
 
 /**
  * Passes control to the IRQ handler of the MMC host controller
@@ -244,43 +262,48 @@ int mmc_nth_irq(mmc_card_t mmc, int n);
  * @param[in] irq  The IRQ number that was triggered.
  * @return         0 if an IRQ was handled
  */
-int mmc_handle_irq(mmc_card_t mmc, int irq);
+int mmc_handle_irq(mmc_card_t *mmc, int irq);
 
 /** Get card capacity
  * @param[in] mmc_card  A handle to an initialised MMC card
  * @return              Card capacity in bytes, negative on failure.
  */
-long long mmc_card_capacity(mmc_card_t mmc_card);
+long long mmc_card_capacity(mmc_card_t *mmc_card);
 
 //------------------------------------------------------------------------------
 // Wrapper functions
 
-static inline int host_send_command(struct mmc_card *card, struct mmc_cmd *cmd, sdio_cb cb, void *token)
+static inline int host_send_command(
+    mmc_card_t *card,
+    mmc_cmd_t *cmd,
+    sdio_cb cb,
+    void *token
+)
 {
     return sdio_send_command(card->sdio, cmd, cb, token);
 }
 
-static inline int host_nth_irq(mmc_card_t card, int n)
+static inline int host_nth_irq(mmc_card_t *card, int n)
 {
     return sdio_nth_irq(card->sdio, n);
 }
 
-static inline int host_handle_irq(struct mmc_card *card, int irq)
+static inline int host_handle_irq(mmc_card_t *card, int irq)
 {
     return sdio_handle_irq(card->sdio, irq);
 }
 
-static inline int host_is_voltage_compatible(struct mmc_card *card, int mv)
+static inline int host_is_voltage_compatible(mmc_card_t *card, int mv)
 {
     return sdio_is_voltage_compatible(card->sdio, mv);
 }
 
-static inline int host_reset(struct mmc_card *card)
+static inline int host_reset(mmc_card_t *card)
 {
     return sdio_reset(card->sdio);
 }
 
-static inline int host_set_operational(struct mmc_card *card)
+static inline int host_set_operational(mmc_card_t *card)
 {
     return sdio_set_operational(card->sdio);
 }
