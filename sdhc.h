@@ -9,7 +9,7 @@
 #pragma once
 
 #include <platsupport/io.h>
-#include "sdio.h"
+#include <sdio.h>
 
 typedef volatile struct sdhc_regs_s {
     uint32_t ds_addr;               //0x00 DMA System Address

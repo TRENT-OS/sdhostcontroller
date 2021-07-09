@@ -6,8 +6,8 @@
  * Original file at https://github.com/seL4/projects_libs/blob/master/libsdhcdrivers/src/plat/imx6/sdio.c
  */
 
-#include "../../sdhc.h"
-#include "../../services.h"
+#include <sdhc.h>
+#include <services.h>
 
 static const int
 _sdhc_irq_table[] = {

@@ -1,6 +1,6 @@
 /* Copyright (C) 2021, HENSOLDT Cyber GmbH */
 
-#include "../../mmc.h"
+#include <mmc.h>
 
 uint32_t mmc_get_voltage(mmc_card_t *card)
 {

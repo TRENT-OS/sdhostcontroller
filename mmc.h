@@ -10,8 +10,8 @@
 #pragma once
 
 #include <platsupport/io.h>
-#include "sdhc.h"
-#include "sdio.h"
+#include <sdhc.h>
+#include <sdio.h>
 
 /* MMC Standard Command Index,     Response Type */
 #define MMC_GO_IDLE_STATE         0  //NONE

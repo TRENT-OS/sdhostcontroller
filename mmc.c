@@ -6,8 +6,8 @@
  * Original file at https://github.com/seL4/projects_libs/blob/master/libsdhcdrivers/src/mmc.c
  */
 
-#include "mmc.h"
-#include "services.h"
+#include <mmc.h>
+#include <services.h>
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>

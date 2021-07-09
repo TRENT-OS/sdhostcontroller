@@ -1,7 +1,7 @@
 /* Copyright (C) 2021, HENSOLDT Cyber GmbH */
 
-#include "../../mmc.h"
-#include "../../sdhc.h"
+#include <mmc.h>
+#include <sdhc.h>
 
 /* Mixer Control Register */
 #define MIX_CTRL_MSBSEL         (1 << 5)  //Multi/Single Block Select.

@@ -6,14 +6,14 @@
  * Original file at https://github.com/seL4/projects_libs/blob/master/libsdhcdrivers/src/sdhc.c
  */
 
-#include "sdhc.h"
+#include <sdhc.h>
 
 #include <autoconf.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
-#include "services.h"
-#include "mmc.h"
+#include <services.h>
+#include <mmc.h>
 
 static inline sdhc_dev_t *sdio_get_sdhc(sdio_host_dev_t *sdio)
 {
