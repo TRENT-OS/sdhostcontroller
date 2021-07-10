@@ -205,3 +205,11 @@ int sdhc_init(
     ps_io_ops_t *io_ops,
     sdio_host_dev_t *dev
 );
+
+/**
+ * Configure SDHC clock properly for a specific SoC/board.
+ * @param[in] base_addr     Base address of the SDHC peripheral.
+ * @param[in] clk_mode      Clock mode (init: 400kHz, trans: 25MHz)
+ * @result Return 0 on success
+ */
+int sdhc_set_clock(volatile void *base_addr, clock_mode_e clk_mode);

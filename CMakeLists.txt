@@ -28,6 +28,7 @@ function(SdHostController_DeclareCAmkESComponent
             ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/mmc.c
             ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/sdhc.c
             ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/plat/${PLATFORM}/plat_sdio.c
+            ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/plat/${PLATFORM}/plat_sdhc.c
         INCLUDES
             ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/plat/${PLATFORM}
         C_FLAGS
