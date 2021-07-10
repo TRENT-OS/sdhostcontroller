@@ -273,6 +273,13 @@ int mmc_handle_irq(mmc_card_t *mmc, int irq);
  */
 long long mmc_card_capacity(mmc_card_t *mmc_card);
 
+/**
+ * Get voltage range as bit mask.
+ * @param[in] card  A handle to an initialised MMC card
+ * @return          Voltage range as bit mask.
+ */
+uint32_t mmc_get_voltage(mmc_card_t *card);
+
 //------------------------------------------------------------------------------
 // Wrapper functions
 

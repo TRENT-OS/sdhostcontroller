@@ -310,13 +310,7 @@ static int mmc_voltage_validation(mmc_card_t *card)
     card->ocr = cmd.response[0];
 
     /* TODO: Check uSDHC compatibility */
-    voltage = MMC_VDD_29_30 | MMC_VDD_30_31;
-    if (host_is_voltage_compatible(card, 3300) && (card->ocr & voltage)) {
-        /* Voltage compatible */
-        voltage |= (1 << 30);
-        voltage |= (1 << 25);
-        voltage |= (1 << 24);
-    }
+    voltage = mmc_get_voltage(card);
 
     /* Wait until the voltage level is set. */
     do {

@@ -58,7 +58,6 @@ static int sdhc_next_cmd(sdhc_dev_t *host)
 {
     mmc_cmd_t *cmd = host->cmd_list_head;
     uint32_t val;
-    uint32_t mix_ctrl;
 
     /* Enable IRQs */
     val = (INT_STATUS_ADMAE | INT_STATUS_OVRCURE | INT_STATUS_DEBE
@@ -95,31 +94,8 @@ static int sdhc_next_cmd(sdhc_dev_t *host)
         val |= (cmd->data->blocks << BLK_ATT_BLKCNT_SHF);
         ((sdhc_regs_t *)host->base)->blk_att = val;
 
-        /* Set watermark level */
-        val = cmd->data->block_size / 4;
-        if (val > 0x80) {
-            val = 0x80;
-        }
-        if (cmd->index == MMC_READ_SINGLE_BLOCK) {
-            val = (val << WTMK_LVL_RD_WML_SHF);
-        } else {
-            val = (val << WTMK_LVL_WR_WML_SHF);
-        }
-        ((sdhc_regs_t *)host->base)->wtmk_lvl = val;
-
-        /* Set Mixer Control */
-        mix_ctrl = MIX_CTRL_BCEN;
-        if (cmd->data->blocks > 1) {
-            mix_ctrl |= MIX_CTRL_MSBSEL;
-        }
-        if (cmd->index == MMC_READ_SINGLE_BLOCK) {
-            mix_ctrl |= MIX_CTRL_DTDSEL;
-        }
-
         /* Configure DMA */
         if (get_dma_mode(host, cmd) != DMA_MODE_NONE) {
-            /* Enable DMA */
-            mix_ctrl |= MIX_CTRL_DMAEN;
             /* Set DMA address */
             ((sdhc_regs_t *)host->base)->ds_addr = cmd->data->pbuf;
         }
@@ -131,12 +107,7 @@ static int sdhc_next_cmd(sdhc_dev_t *host)
     val = (cmd->index & CMD_XFR_TYP_CMDINX_MASK) << CMD_XFR_TYP_CMDINX_SHF;
     val &= ~(CMD_XFR_TYP_CMDTYP_MASK << CMD_XFR_TYP_CMDTYP_SHF);
     if (cmd->data) {
-        if (host->version == 2) {
-            /* Some controllers implement MIX_CTRL as part of the XFR_TYP */
-            val |= mix_ctrl;
-        } else {
-            ((sdhc_regs_t *)host->base)->mix_ctrl = mix_ctrl;
-        }
+        val |= sdhc_set_transfer_mode(host);
     }
 
     /* Set response type */

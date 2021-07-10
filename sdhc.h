@@ -115,18 +115,6 @@ sdhc_regs_t;
 #define HOST_CTRL_CAP_MBL_SHF   16        //Max Block Length
 #define HOST_CTRL_CAP_MBL_MASK  0x3       //Max Block Length
 
-/* Mixer Control Register */
-#define MIX_CTRL_MSBSEL         (1 << 5)  //Multi/Single Block Select.
-#define MIX_CTRL_DTDSEL         (1 << 4)  //Data Transfer Direction Select.
-#define MIX_CTRL_DDR_EN         (1 << 3)  //Dual Data Rate mode selection
-#define MIX_CTRL_AC12EN         (1 << 2)  //Auto CMD12 Enable
-#define MIX_CTRL_BCEN           (1 << 1)  //Block Count Enable
-#define MIX_CTRL_DMAEN          (1 << 0)  //DMA Enable
-
-/* Watermark Level register */
-#define WTMK_LVL_WR_WML_SHF     16        //Write Watermark Level
-#define WTMK_LVL_RD_WML_SHF     0         //Read  Watermark Level
-
 typedef enum {
     DMA_MODE_NONE = 0,
     DMA_MODE_SDMA,
@@ -213,3 +201,10 @@ int sdhc_init(
  * @result Return 0 on success
  */
 int sdhc_set_clock(volatile void *base_addr, clock_mode_e clk_mode);
+
+/**
+ * Return transfer bit mask for a specific SoC/board.
+ * @param[in] host          A handle to an initialised host controller
+ * @result Return transfer bit mask.
+ */
+uint32_t sdhc_set_transfer_mode(sdhc_dev_t *host);

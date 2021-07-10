@@ -3,6 +3,18 @@
 #include "../../mmc.h"
 #include "../../sdhc.h"
 
+/* Mixer Control Register */
+#define MIX_CTRL_MSBSEL         (1 << 5)  //Multi/Single Block Select.
+#define MIX_CTRL_DTDSEL         (1 << 4)  //Data Transfer Direction Select.
+#define MIX_CTRL_DDR_EN         (1 << 3)  //Dual Data Rate mode selection
+#define MIX_CTRL_AC12EN         (1 << 2)  //Auto CMD12 Enable
+#define MIX_CTRL_BCEN           (1 << 1)  //Block Count Enable
+#define MIX_CTRL_DMAEN          (1 << 0)  //DMA Enable
+
+/* Watermark Level register */
+#define WTMK_LVL_WR_WML_SHF     16        //Write Watermark Level
+#define WTMK_LVL_RD_WML_SHF     0         //Read  Watermark Level
+
 static void sdhc_enable_clock(volatile void *base_addr)
 {
     uint32_t val;
@@ -87,4 +99,42 @@ int sdhc_set_clock(volatile void *base_addr, clock_mode_e clk_mode)
     }
 
     return rslt;
+}
+
+uint32_t sdhc_set_transfer_mode(sdhc_dev_t *host)
+{
+    /*
+     * Specific registers of the iMX6 SoC are set (WATMK_LVL, MIX_CTRL). These
+     * registers are used instead of the CMD_XFR_TYP register. Hence, 0 is
+     * returned. This might be different for other SoCs.
+     */
+    mmc_cmd_t *cmd = host->cmd_list_head;
+
+    /* Set watermark level */
+    uint32_t val = cmd->data->block_size / 4;
+    if (val > 0x80) {
+        val = 0x80;
+    }
+    if (cmd->index == MMC_READ_SINGLE_BLOCK) {
+        val = (val << WTMK_LVL_RD_WML_SHF);
+    } else {
+        val = (val << WTMK_LVL_WR_WML_SHF);
+    }
+    ((sdhc_regs_t *)host->base)->wtmk_lvl = val;
+
+    /* Set Mixer Control */
+    val = MIX_CTRL_BCEN;
+    if (cmd->data->blocks > 1) {
+        val |= MIX_CTRL_MSBSEL;
+    }
+    if (cmd->index == MMC_READ_SINGLE_BLOCK) {
+        val |= MIX_CTRL_DTDSEL;
+    }
+    if (cmd->data != NULL && cmd->data->pbuf != 0) {
+        val |= MIX_CTRL_DMAEN;
+    }
+
+    ((sdhc_regs_t *)host->base)->mix_ctrl = val;
+
+    return 0;
 }
