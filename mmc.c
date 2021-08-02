@@ -313,6 +313,7 @@ static int mmc_voltage_validation(mmc_card_t *card)
     voltage = mmc_get_voltage(card);
 
     /* Wait until the voltage level is set. */
+    int attempts = 10;
     do {
         if (card->type == CARD_TYPE_SD) {
             cmd.index = MMC_APP_CMD;
@@ -326,7 +327,12 @@ static int mmc_voltage_validation(mmc_card_t *card)
         cmd.rsp_type = MMC_RSP_TYPE_R3;
         host_send_command(card, &cmd, NULL, NULL);
         udelay(100000);
-    } while (!(cmd.response[0] & (1U << 31)));
+    } while (attempts-- >= 0 && !(cmd.response[0] & (1U << 31)));
+
+    if(attempts < 0){
+        ZF_LOGE("Card does not reply -> Could not do the voltage change!");
+        return -1;
+    }
     card->ocr = cmd.response[0];
 
     /* Check CCS bit */
