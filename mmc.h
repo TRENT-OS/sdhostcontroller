@@ -67,11 +67,15 @@
 #define SD_SEND_SCR               51 //R1
 
 /* MMC Voltage Level */
+#define MMC_VDD_35_36             (1 << 23)
+#define MMC_VDD_34_35             (1 << 22)
 #define MMC_VDD_33_34             (1 << 21)
 #define MMC_VDD_32_33             (1 << 20)
 #define MMC_VDD_31_32             (1 << 19)
 #define MMC_VDD_30_31             (1 << 18)
 #define MMC_VDD_29_30             (1 << 17)
+#define MMC_VDD_28_29             (1 << 16)
+#define MMC_VDD_27_28             (1 << 15)
 
 /* Bus width */
 #define MMC_MODE_8BIT       0x04
