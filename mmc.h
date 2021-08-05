@@ -76,10 +76,26 @@
 #define MMC_VDD_29_30             (1 << 17)
 #define MMC_VDD_28_29             (1 << 16)
 #define MMC_VDD_27_28             (1 << 15)
+#define MMC_VDD_165_195           (1 << 7)
 
 /* Bus width */
 #define MMC_MODE_8BIT       0x04
 #define MMC_MODE_4BIT       0x02
+
+// separate error code for each bit in the "Error Interrupt Status Register"
+#define INT_STATUS_OK                   0
+#define INT_STATUS_ERROR                -1
+#define INT_STATUS_CMD_TIMEOUT_ERROR    -2
+#define INT_STATUS_CMD_CRC_ERROR        -3
+#define INT_STATUS_CMD_END_BIT_ERROR    -4
+#define INT_STATUS_CMD_INDEX_ERROR      -5
+#define INT_STATUS_DATA_TIMEOUT_ERROR   -6
+#define INT_STATUS_DATA_CRC_ERROR       -7
+#define INT_STATUS_DATA_END_BIT_ERROR   -8
+#define INT_STATUS_CURRENT_LIMIT_ERROR  -9
+#define INT_STATUS_AUTO_CMD12_ERROR     -10
+#define INT_STATUS_ADMA_ERROR           -11
+#define INT_STATUS_TUNING_ERROR         -12
 
 typedef enum {
     MMC_RSP_TYPE_NONE = 0,

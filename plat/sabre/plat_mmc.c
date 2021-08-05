@@ -4,14 +4,21 @@
 
 uint32_t mmc_get_voltage(mmc_card_t *card)
 {
-    // 3.3V VDD range: 2.7-3.6V
-    uint32_t voltage = MMC_VDD_27_28 | MMC_VDD_28_29 | MMC_VDD_29_30 |
-                       MMC_VDD_30_31 | MMC_VDD_31_32 | MMC_VDD_32_33 |
-                       MMC_VDD_33_34 | MMC_VDD_34_35 | MMC_VDD_35_36;
-    if ((card->type != CARD_TYPE_MMC)
-        && host_is_voltage_compatible(card, 3300)
-        && (card->ocr & voltage)) {
-        voltage |= (1 << 30); // HCS bit
+    uint32_t host_voltage = 0;
+    if(host_is_voltage_compatible(card,3300)){
+        host_voltage |= MMC_VDD_32_33 | MMC_VDD_33_34;
     }
-    return voltage;
+    if(host_is_voltage_compatible(card,3000)){
+        host_voltage |= MMC_VDD_30_31 | MMC_VDD_31_32;
+    }
+    if(host_is_voltage_compatible(card,1800)){
+        host_voltage |= MMC_VDD_165_195;
+    }
+
+    uint32_t acmd41_arg = host_voltage & card->ocr;
+    if (acmd41_arg != 0) {
+        // set HCS bit
+        acmd41_arg |= (1 << 30);
+    }
+    return acmd41_arg;
 }

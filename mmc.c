@@ -280,7 +280,6 @@ static int mmc_card_registry(mmc_card_t *card)
 static int mmc_voltage_validation(mmc_card_t *card)
 {
     mmc_cmd_t cmd = {.data = NULL};
-    int voltage;
     int ret;
 
     /* Send CMD55 to issue an application specific command. */
@@ -296,10 +295,12 @@ static int mmc_voltage_validation(mmc_card_t *card)
         card->type = CARD_TYPE_SD;
     } else {
         /* It is a MMC card. */
-        cmd.index = MMC_SEND_OP_COND;
-        cmd.arg = 0;
-        cmd.rsp_type = MMC_RSP_TYPE_R3;
-        card->type = CARD_TYPE_MMC;
+        // cmd.index = MMC_SEND_OP_COND;
+        // cmd.arg = 0;
+        // cmd.rsp_type = MMC_RSP_TYPE_R3;
+        // card->type = CARD_TYPE_MMC;
+        ZF_LOGE("MMC card detected - not supported!");
+        return -1;
     }
     ret = host_send_command(card, &cmd, NULL, NULL);
     if (ret) {
@@ -309,8 +310,7 @@ static int mmc_voltage_validation(mmc_card_t *card)
     }
     card->ocr = cmd.response[0];
 
-    /* TODO: Check uSDHC compatibility */
-    voltage = mmc_get_voltage(card);
+    uint32_t acmd41_arg = mmc_get_voltage(card);
 
     /* Wait until the voltage level is set. */
     int attempts = 10;
@@ -323,7 +323,7 @@ static int mmc_voltage_validation(mmc_card_t *card)
         }
 
         cmd.index = SD_SD_APP_OP_COND;
-        cmd.arg = voltage;
+        cmd.arg = acmd41_arg;
         cmd.rsp_type = MMC_RSP_TYPE_R3;
         host_send_command(card, &cmd, NULL, NULL);
         udelay(100000);
@@ -337,10 +337,14 @@ static int mmc_voltage_validation(mmc_card_t *card)
 
     /* Check CCS bit */
     if (card->ocr & (1 << 30)) {
+        ZF_LOGD("SDHC/SDXC");
         card->high_capacity = 1;
     } else {
+        ZF_LOGD("SDSC Ver2.00 or Ver3.00");
         card->high_capacity = 0;
     }
+
+    // ToDo: Voltage Switch
 
     ZF_LOGD("Voltage set!");
 
@@ -360,7 +364,39 @@ static int mmc_reset(mmc_card_t *card)
     cmd.index = MMC_SEND_EXT_CSD;
     cmd.arg = 0x1AA;
     cmd.rsp_type = MMC_RSP_TYPE_R1;
-    host_send_command(card, &cmd, NULL, NULL);
+    int status = host_send_command(card, &cmd, NULL, NULL);
+
+    if( status == INT_STATUS_DATA_TIMEOUT_ERROR ||
+        status == INT_STATUS_CMD_TIMEOUT_ERROR
+    ){
+        ZF_LOGE("Card does not respond!");
+        ZF_LOGE("SDSC v1.01/v1.10 detected or Not SD card (MMC) detected - not supported");
+        return -1;
+    }
+
+    /* Check response R7 to CMD8 */
+    //fields to check in argument
+    uint8_t vhs_arg = (cmd.arg >> 8) & 0xf;
+    uint8_t check_pattern_arg = cmd.arg & 0xff;
+
+    //fields to check in response
+    uint8_t vca_rsp = (cmd.response[0] >> 8) & 0xf;
+    uint8_t check_pattern_rsp = cmd.response[0] & 0xff;
+
+    if( status == INT_STATUS_DATA_CRC_ERROR ||
+        status == INT_STATUS_CMD_CRC_ERROR ||
+        vca_rsp != vhs_arg ||
+        check_pattern_rsp != check_pattern_arg
+    ){
+        ZF_LOGE("Unusable card!");
+        return -1;
+    }
+
+    if(status != 0){
+        ZF_LOGE("Errors detected when sending command CMD%d!",cmd.index);
+        return -1;
+    }
+
     return 0;
 }
 
@@ -389,6 +425,13 @@ static void mmc_blockop_completion_cb(
 
 int mmc_init(sdio_host_dev_t *sdio, ps_io_ops_t *io_ops, mmc_card_t **mmc_card)
 {
+    // Note: Currently, we do not support
+    //      * legacy card version 1.x,
+    //      * MMC cards,
+    //      * SDIO cards.
+    // Effectively, this means we only do steps 1-4,19-27,32-33 of
+    // section 3.6 Card Initialization and Identification in document
+    // PartA2_SD_Host_Controller_Simplified_Specification_Ver3.00.
     mmc_card_t *mmc;
 
     /* Allocate the mmc card structure */
@@ -399,24 +442,37 @@ int mmc_init(sdio_host_dev_t *sdio, ps_io_ops_t *io_ops, mmc_card_t **mmc_card)
     }
     mmc->dalloc = &io_ops->dma_manager;
     mmc->sdio = sdio;
+
     /* Reset the host controller */
     if (host_reset(mmc)) {
         ZF_LOGE("Failed to reset host controller");
         free(mmc);
         return -1;
     }
+
+    // PartA2_SD_Host_Controller_Simplified_Specification_Ver3.00:
+    //      3.6 Card Initialization and Identification
     /* Initialise the card */
+    // Steps 1-4
     if (mmc_reset(mmc)) {
         ZF_LOGE("Failed to reset SD/MMC card");
         free(mmc);
         return -1;
     }
+
+    // Skip Steps 5-10: SDIO specific
+    // Skip Steps 12-18: Legacy cards, not SD cards
+
+    /* Voltage validation */
+    // Steps: 19-25/26/27 (assume flag F8=1)
     if (mmc_voltage_validation(mmc)) {
         ZF_LOGE("Failed to perform voltage validation");
         free(mmc);
         return -1;
     }
+
     /* Register the card */
+    // Steps: 32-33
     if (mmc_card_registry(mmc)) {
         ZF_LOGE("Failed to register card");
         free(mmc);

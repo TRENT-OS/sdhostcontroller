@@ -173,11 +173,11 @@ static int sdhc_handle_irq(sdio_host_dev_t *sdio, int irq UNUSED)
     }
     if (int_status & INT_STATUS_ERR) {
         ZF_LOGE("CMD/DATA transfer error"); /* (exl. IMX6) */
-        cmd->complete = -1;
+        cmd->complete = INT_STATUS_ERROR;
     }
     if (int_status & INT_STATUS_AC12E) {
         ZF_LOGE("Auto CMD12 Error");
-        cmd->complete = -1;
+        cmd->complete = INT_STATUS_AUTO_CMD12_ERROR;
     }
     /** DMA errors **/
     if (int_status & INT_STATUS_DMAE) {
@@ -186,37 +186,37 @@ static int sdhc_handle_irq(sdio_host_dev_t *sdio, int irq UNUSED)
     }
     if (int_status & INT_STATUS_ADMAE) {
         ZF_LOGE("ADMA error");       /*  (exl. IMX6) */
-        cmd->complete = -1;
+        cmd->complete = INT_STATUS_ADMA_ERROR;
     }
     /** DATA errors **/
     if (int_status & INT_STATUS_DEBE) {
         ZF_LOGE("Data end bit error");
-        cmd->complete = -1;
+        cmd->complete = INT_STATUS_DATA_END_BIT_ERROR;
     }
     if (int_status & INT_STATUS_DCE) {
         ZF_LOGE("Data CRC error");
-        cmd->complete = -1;
+        cmd->complete = INT_STATUS_DATA_CRC_ERROR;
     }
     if (int_status & INT_STATUS_DTOE) {
         ZF_LOGE("Data transfer error");
-        cmd->complete = -1;
+        cmd->complete = INT_STATUS_DATA_TIMEOUT_ERROR;
     }
     /** CMD errors **/
     if (int_status & INT_STATUS_CIE) {
         ZF_LOGE("Command index error");
-        cmd->complete = -1;
+        cmd->complete = INT_STATUS_CMD_INDEX_ERROR;
     }
     if (int_status & INT_STATUS_CEBE) {
         ZF_LOGE("Command end bit error");
-        cmd->complete = -1;
+        cmd->complete = INT_STATUS_CMD_END_BIT_ERROR;
     }
     if (int_status & INT_STATUS_CCE) {
         ZF_LOGE("Command CRC error");
-        cmd->complete = -1;
+        cmd->complete = INT_STATUS_CMD_CRC_ERROR;
     }
     if (int_status & INT_STATUS_CTOE) {
         ZF_LOGE("CMD Timeout...");
-        cmd->complete = -1;
+        cmd->complete = INT_STATUS_CMD_TIMEOUT_ERROR;
     }
 
     if (int_status & INT_STATUS_TP) {
@@ -330,11 +330,15 @@ static int sdhc_is_voltage_compatible(sdio_host_dev_t *sdio, int mv)
 {
     sdhc_dev_t *host = sdio_get_sdhc(sdio);
     uint32_t val = ((sdhc_regs_t *)host->base)->host_ctrl_cap;
-    if (mv == 3300 && (val & HOST_CTRL_CAP_VS33)) {
-        return 1;
-    } else {
-        return 0;
+    bool is_compatible = false;
+    if(mv == 1800){ // check if 1.8 V range is supported
+        is_compatible = (val & HOST_CTRL_CAP_VS18);
+    }else if(mv == 3000){ // check if 3.0 V range is supported
+        is_compatible = (val & HOST_CTRL_CAP_VS30);
+    }else if(mv == 3300){ // check if 3.3 V range is supported
+        is_compatible = (val & HOST_CTRL_CAP_VS33);
     }
+    return is_compatible ? 1 : 0;
 }
 
 static int sdhc_send_cmd(
