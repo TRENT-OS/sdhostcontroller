@@ -411,7 +411,8 @@ static int sdhc_reset(sdio_host_dev_t *sdio)
     /* Configure clock for initialization */
     sdhc_set_clock(host->base, CLOCK_INITIAL);
 
-    /* TODO: Select Voltage Level */
+    /* Select Voltage Level */
+    sdhc_set_voltage_level(host);
 
     /* Set bus width */
     val = ((sdhc_regs_t *)host->base)->prot_ctrl;

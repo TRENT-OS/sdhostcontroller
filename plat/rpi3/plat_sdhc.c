@@ -191,3 +191,8 @@ uint32_t sdhc_set_transfer_mode(sdhc_dev_t *host)
 
     return trans_mode;
 }
+
+void sdhc_set_voltage_level(sdhc_dev_t *host)
+{
+    return;
+}
