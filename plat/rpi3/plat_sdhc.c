@@ -196,3 +196,15 @@ void sdhc_set_voltage_level(sdhc_dev_t *host)
 {
     return;
 }
+
+void sdhc_inter_command_delay(void)
+{
+	// For the RPi3 a delay is necessary, otherwise there will be a CMD/data
+	// transfer error.
+	// ToDo: We still need to figure out the reason why we need a delay here. It
+	// seems to only be the case for the RPi3 and is not required for the other
+	// platforms. The general issue is that this delay is called whenever two
+	// commands are issued. As a result, this will result in a big performance
+	// loss.
+	udelay(1000);
+}

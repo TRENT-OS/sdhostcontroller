@@ -220,3 +220,8 @@ uint32_t sdhc_set_transfer_mode(sdhc_dev_t *host);
  * @param[in] host          A handle to an initialised host controller
  */
 void sdhc_set_voltage_level(sdhc_dev_t *host);
+
+/**
+ * Inter-command delay.
+ */
+void sdhc_inter_command_delay(void);

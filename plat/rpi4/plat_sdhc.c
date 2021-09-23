@@ -202,3 +202,8 @@ void sdhc_set_voltage_level(sdhc_dev_t *host)
 
     return;
 }
+
+void sdhc_inter_command_delay(void)
+{
+	// nothing to do here
+}
