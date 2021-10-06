@@ -8,8 +8,7 @@
 
 #include <platsupport/gpio.h>
 #include <platsupport/plat/gpio.h>
-#include <platsupport/plat/mailbox.h>
-#include <platsupport/plat/mailbox_util.h>
+#include <platsupport/mach/mailbox_util.h>
 
 #define SDHC1_PADDR         0xfe340000
 #define SDHC1_SIZE          0x1000

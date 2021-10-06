@@ -55,7 +55,7 @@ int sdio_init(sdio_id_e id, ps_io_ops_t *io_ops, sdio_host_dev_t *dev)
         return -1;
     }
 
-    if(!bcm2711_set_power_state_on (&mbox,DEVICE_ID_SD_CARD))
+    if(!mailbox_set_power_state_on (&mbox,DEVICE_ID_SD_CARD))
 	{
 		ZF_LOGE("BCM2708 controller did not power on successfully");
 		return -1;
@@ -64,7 +64,7 @@ int sdio_init(sdio_id_e id, ps_io_ops_t *io_ops, sdio_host_dev_t *dev)
     // We must provide the CPU frequency to the libplatsupport delay module,
     // otherwise it complains. The ARM clock rate can be requested from the
     // mailbox interface.
-    uint32_t clock_freq = bcm2711_get_clock_rate(&mbox,CLOCK_ID_ARM);
+    uint32_t clock_freq = mailbox_get_clock_rate(&mbox,CLOCK_ID_ARM);
     ps_cpufreq_hint(clock_freq);
 
     //sdio initialization

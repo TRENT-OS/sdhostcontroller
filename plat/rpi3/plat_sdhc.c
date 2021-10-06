@@ -130,7 +130,7 @@ int sdhc_set_clock(volatile void *base_addr, clock_mode_e clk_mode)
 	 * above, we can trust the value returned by the mailbox interface and that
 	 * there is no prescale value applied to it.
 	 */
-    uint32_t base_clock = bcm2837_get_clock_rate (&mbox, CLOCK_ID_EMMC);
+    uint32_t base_clock = mailbox_get_clock_rate (&mbox, CLOCK_ID_EMMC);
 
 	while ((((sdhc_regs_t *)base_addr)->pres_state & SDHC_PRES_STATE_CDIHB) ||
 		   (((sdhc_regs_t *)base_addr)->pres_state & SDHC_PRES_STATE_CIHB));
