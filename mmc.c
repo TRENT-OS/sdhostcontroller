@@ -96,13 +96,13 @@ static int mmc_decode_csd(mmc_card_t *mmc_card, csd_t *csd)
     csd->structure = CSD_BITS(126, 2);
 
     if (csd->structure == CSD_VERSION_1) {
-        ZF_LOGD("CSD Version 1.0");
+        ZF_LOGV("CSD Version 1.0");
         csd->c_size      = CSD_BITS(62, 12);
         csd->c_size_mult = CSD_BITS(47,  3);
         csd->read_bl_len = CSD_BITS(80,  4);
         csd->tran_speed  = CSD_BITS(96,  8);
     } else if (csd->structure == CSD_VERSION_2_AND_3) {
-        ZF_LOGD("CSD Version 2.0");
+        ZF_LOGV("CSD Version 2.0");
         csd->c_size      = CSD_BITS(48, 22);
         csd->c_size_mult = 0;
         csd->read_bl_len = CSD_BITS(80,  4);

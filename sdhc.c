@@ -77,7 +77,7 @@ static int sdhc_next_cmd(sdhc_dev_t *host)
     sdhc_inter_command_delay();
 
     /* Write to the argument register. */
-    ZF_LOGD("CMD: %d with arg %x ", cmd->index, cmd->arg);
+    ZF_LOGV("CMD: %d with arg %x ", cmd->index, cmd->arg);
     ((sdhc_regs_t *)host->base)->cmd_arg = cmd->arg;
 
     if (cmd->data) {
