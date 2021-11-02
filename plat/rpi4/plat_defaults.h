@@ -17,12 +17,6 @@
 #define GPIO_PADDR      0xfe200000
 #define GPIO_SIZE       0x1000
 
-// Set the default port to SDHC1.
-#define SdHostController_HW_INSTANCE_CONFIGURE_BY_DEFAULT(_inst_) \
-    SdHostController_HW_INSTANCE_CONFIGURE_BY_INDEX(_inst_, 1)
-
-#define SdHostController_INSTANCE_CONFIGURE_BY_DEFAULT(_inst_) \
-    SdHostController_INSTANCE_CONFIGURE_BY_INDEX(_inst_, 1)
 
 /**
  * @brief   Declares the SDHC HW component.
@@ -105,10 +99,28 @@
 // Instance Configuration
 
 /**
+ * @brief   Configures the SDHC HW component to the default sd card slot.
+ *
+ * @param   _inst_      - [in] Component's HW instance.
+ */
+#define SdHostController_HW_INSTANCE_CONFIGURE_BY_DEFAULT(_inst_) \
+    SdHostController_HW_INSTANCE_CONFIGURE_BY_INDEX(_inst_, 1)
+
+
+/**
+ * @brief   Configures the SDHC driver component to the default sd card slot.
+ *
+ * @param   _inst_      - [in] Component's instance.
+ */
+#define SdHostController_INSTANCE_CONFIGURE_BY_DEFAULT(_inst_) \
+    SdHostController_INSTANCE_CONFIGURE_BY_INDEX(_inst_, 1)
+
+
+/**
  * @brief   Configures the SDHC HW component to the passed index value of
  *          the peripheral.
  *
- * @param   _inst_      - [in] Component's instance.
+ * @param   _inst_      - [in] Component's HW instance.
  * @param   _idx_       - [in] Index of the peripheral (sd card slot) to be
  *                             used.
  */
@@ -124,8 +136,18 @@
     _inst_.gpioBase_size     = GPIO_SIZE; \
     _inst_.irq_irq_number    = SDHC ## _idx_ ## _IRQ;
 
-#define CONFIGURE_INSTANCE_SD_DRV( \
-            _inst_drv_, \
-            _dma_size_) \
+
+/**
+ * @brief   Configures the SDHC driver component to the passed index value of
+ *          the peripheral.
+ *
+ * @param   _inst_      - [in] Component's instance.
+ * @param   _idx_       - [in] Index of the peripheral (sd card slot) to be
+ *                             used.
+ */
+#define SdHostController_INSTANCE_CONFIGURE_BY_INDEX( \
+    _inst_, \
+    _idx_) \
     \
-    _inst_drv_.dma_pool  = _dma_size_;
+    _inst_.peripheral_idx    = _idx_; \
+    _inst_.dma_pool  = 4096;

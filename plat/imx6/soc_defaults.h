@@ -87,6 +87,21 @@
 // Instance Configuration
 
 /**
+ * @brief   Configures the SDHC driver component to the passed index value of
+ *          the peripheral.
+ *
+ * @param   _inst_      - [in] Component's instance.
+ * @param   _idx_       - [in] Index of the peripheral (sd card slot) to be
+ *                             used.
+ */
+#define SdHostController_INSTANCE_CONFIGURE_BY_INDEX( \
+    _inst_, \
+    _idx_) \
+    \
+    _inst_.peripheral_idx    = _idx_;
+
+
+/**
  * @brief   Configures the SDHC HW component to the passed index value of
  *          the peripheral.
  *
