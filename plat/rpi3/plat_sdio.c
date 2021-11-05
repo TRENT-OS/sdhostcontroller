@@ -36,15 +36,15 @@ int sdio_init(sdio_id_e id, ps_io_ops_t *io_ops, sdio_host_dev_t *dev)
     for (unsigned i = 0; i < 6; i++)
     {
         gpio_sys.init(&gpio_sys,34 + i,0,&gpio);
-        bcm2837_gpio_fsel(&gpio,BCM2837_GPIO_FSEL_INPT);
+        bcm283x_gpio_fsel(&gpio,BCM283X_GPIO_FSEL_INPT);
         gpio_sys.init(&gpio_sys,48 + i,0,&gpio);
-        bcm2837_gpio_fsel(&gpio,BCM2837_GPIO_FSEL_INPT);
+        bcm283x_gpio_fsel(&gpio,BCM283X_GPIO_FSEL_INPT);
     }
     ZF_LOGD("Routing SD to Arasan.");
     for (unsigned i = 0; i < 6; i++)
     {
         gpio_sys.init(&gpio_sys,48 + i,0,&gpio);
-        bcm2837_gpio_fsel(&gpio,BCM2837_GPIO_FSEL_ALT3);
+        bcm283x_gpio_fsel(&gpio,BCM283X_GPIO_FSEL_ALT3);
     }
 
     //mailbox initialization

@@ -6,8 +6,7 @@
 
 #pragma once
 
-#include <platsupport/gpio.h>
-#include <platsupport/plat/gpio.h>
+#include <platsupport/mach/gpio.h>
 #include <platsupport/mach/mailbox_util.h>
 
 #define SDHC1_PADDR         0xfe340000
