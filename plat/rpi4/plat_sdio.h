@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021, HENSOLDT Cyber GmbH
+ * Copyright (C) 2021-2022, HENSOLDT Cyber GmbH
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -24,4 +24,5 @@ typedef enum {
 }
 sdio_id_e;
 
-mailbox_t           mbox;
+extern mailbox_t mbox;
+

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021, HENSOLDT Cyber GmbH
+ * Copyright (C) 2021-2022, HENSOLDT Cyber GmbH
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -7,6 +7,7 @@
 #include <services.h>
 #include <sdhc.h>
 
+mailbox_t   mbox;
 gpio_sys_t  gpio_sys;
 gpio_t      gpio;
 
