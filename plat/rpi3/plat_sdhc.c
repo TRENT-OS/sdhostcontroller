@@ -16,21 +16,21 @@
 #define SD_CLOCK_208        208000000
 
 // SD specification version code
-#define HOST_SPEC_V1 		0x00
-#define HOST_SPEC_V2		0x01
-#define HOST_SPEC_V3		0x02
+#define HOST_SPEC_V1        0x00
+#define HOST_SPEC_V2        0x01
+#define HOST_SPEC_V3        0x02
 
 // Clock Control Register (0x2c)
-#define SDHC_CLOCK_CONTROL_SCE 		(1u << 2) // SC Clock Enable
-#define SDHC_CLOCK_CONTROL_ICS 		(1u << 1) // Internal Clock Stable
-#define SDHC_CLOCK_CONTROL_ICE 		(1u << 0) // Internal Clock Enable
+#define SDHC_CLOCK_CONTROL_SCE      (1u << 2) // SC Clock Enable
+#define SDHC_CLOCK_CONTROL_ICS      (1u << 1) // Internal Clock Stable
+#define SDHC_CLOCK_CONTROL_ICE      (1u << 0) // Internal Clock Enable
 
 /*
  * Get clock divider
  *
  * Generally we start with calculating the theoretically closest divider
  * according to the following formula:
- * 		clock_freq = emmc_base_clock / divider;
+ *      clock_freq = emmc_base_clock / divider;
  *
  * This clock divider can not be immediately used, but has to be modified in
  * order to comply with the SDHC specification. Depending on the SDHC version,
@@ -66,7 +66,7 @@
  * be half of the actual divider.
  *
  * For more information, see: SDHC specification, ver 3.00, 2.2.14 Clock Control
- * 							  Register (0x2c)
+ *                            Register (0x2c)
  */
 static uint32_t get_clock_divider(
     volatile void *base_addr,
@@ -74,102 +74,102 @@ static uint32_t get_clock_divider(
     uint32_t target_freq
 )
 {
-	uint32_t closest = base_clock / target_freq;
-	uint32_t divider;
+    uint32_t closest = base_clock / target_freq;
+    uint32_t divider;
 
-	// Get SDHC version from "Host Controller Version Register" (0xfe)
-	int sdhc_version = ((((sdhc_regs_t *)base_addr)->host_version >> 16) & 0xff);
-	if(sdhc_version < HOST_SPEC_V3)
-	{
-		// SDHC version 2.00
-		for (size_t i = 0; i < 9; i++)
-		{
-			divider = (1u << i);
-			if(2 * divider >= closest) break;
-		}
-	}else{
-		// SDHC version 3.00
-		if(closest % 2 == 0)
-		{
-			divider = closest / 2;
-		}else{
-			divider = (closest / 2) + 1;
-		}
+    // Get SDHC version from "Host Controller Version Register" (0xfe)
+    int sdhc_version = ((((sdhc_regs_t *)base_addr)->host_version >> 16) & 0xff);
+    if(sdhc_version < HOST_SPEC_V3)
+    {
+        // SDHC version 2.00
+        for (size_t i = 0; i < 9; i++)
+        {
+            divider = (1u << i);
+            if(2 * divider >= closest) break;
+        }
+    }else{
+        // SDHC version 3.00
+        if(closest % 2 == 0)
+        {
+            divider = closest / 2;
+        }else{
+            divider = (closest / 2) + 1;
+        }
 
-		if(divider > 0x3ff)
-		{
-			divider = 0x3ff;
-		}
-	}
+        if(divider > 0x3ff)
+        {
+            divider = 0x3ff;
+        }
+    }
 
-	// divider bits to be set in the "Clock Control Register" (0x2c)
-	uint32_t freq_select = (divider & 0xff);
-	uint32_t upper_bits =  0;
-	if (sdhc_version > HOST_SPEC_V2)
-	{
-		upper_bits = (divider >> 8) & 0x3;
-	}
-	uint32_t ret = (freq_select << 8) | (upper_bits << 6);
-	return ret;
+    // divider bits to be set in the "Clock Control Register" (0x2c)
+    uint32_t freq_select = (divider & 0xff);
+    uint32_t upper_bits =  0;
+    if (sdhc_version > HOST_SPEC_V2)
+    {
+        upper_bits = (divider >> 8) & 0x3;
+    }
+    uint32_t ret = (freq_select << 8) | (upper_bits << 6);
+    return ret;
 }
 
 // See: SDHC specification, ver 3.00, section 3.2 SD Clock Control
 int sdhc_set_clock(volatile void *base_addr, clock_mode_e clk_mode)
 {
-	/*
-	 * Several forum posts claim that the SD frequency is always 41.6MHz on the
-	 * Pi (https://github.com/raspberrypi/linux/issues/467). According to
-	 * https://www.raspberrypi.org/forums/viewtopic.php?t=94133, "asking for the
-	 * EMMC frequency from the mailbox is pointless on baremetal as all clocks
-	 * returned from the mailbox interface are the base clocks for those
-	 * peripherals, not the dividers applied using the perpiheral".
-	 *
-	 * The base clock returned by the mailbox interface is 200MHz. This value
-	 * was verified by measuring the oscillation frequency on the CLK pin for
-	 * the RPi3 B+. Our measurements confirm that in contrast to the claims
-	 * above, we can trust the value returned by the mailbox interface and that
-	 * there is no prescale value applied to it.
-	 */
+    /*
+     * Several forum posts claim that the SD frequency is always 41.6MHz on the
+     * Pi (https://github.com/raspberrypi/linux/issues/467). According to
+     * https://www.raspberrypi.org/forums/viewtopic.php?t=94133, "asking for the
+     * EMMC frequency from the mailbox is pointless on baremetal as all clocks
+     * returned from the mailbox interface are the base clocks for those
+     * peripherals, not the dividers applied using the perpiheral".
+     *
+     * The base clock returned by the mailbox interface is 200MHz. This value
+     * was verified by measuring the oscillation frequency on the CLK pin for
+     * the RPi3 B+. Our measurements confirm that in contrast to the claims
+     * above, we can trust the value returned by the mailbox interface and that
+     * there is no prescale value applied to it.
+     */
     uint32_t base_clock = mailbox_get_clock_rate (&mbox, CLOCK_ID_EMMC);
 
-	while ((((sdhc_regs_t *)base_addr)->pres_state & SDHC_PRES_STATE_CDIHB) ||
-		   (((sdhc_regs_t *)base_addr)->pres_state & SDHC_PRES_STATE_CIHB));
+    while ((((sdhc_regs_t *)base_addr)->pres_state & SDHC_PRES_STATE_CDIHB) ||
+           (((sdhc_regs_t *)base_addr)->pres_state & SDHC_PRES_STATE_CIHB));
 
-	uint32_t control = 0;
+    uint32_t control = 0;
 
-	// Step 0: Turn off "SD Clock Enable" (bit 2) if SD clock is already enabled
-	if(((sdhc_regs_t *)base_addr)->sys_ctrl & SDHC_CLOCK_CONTROL_SCE)
-	{
-		control = ((sdhc_regs_t *)base_addr)->sys_ctrl;
-		control &= ~SDHC_CLOCK_CONTROL_SCE;
+    // Step 0: Turn off "SD Clock Enable" (bit 2) if SD clock is already enabled
+    if(((sdhc_regs_t *)base_addr)->sys_ctrl & SDHC_CLOCK_CONTROL_SCE)
+    {
+        control = ((sdhc_regs_t *)base_addr)->sys_ctrl;
+        control &= ~SDHC_CLOCK_CONTROL_SCE;
         ((sdhc_regs_t *)base_addr)->sys_ctrl = control;
-		while ((((sdhc_regs_t *)base_addr)->pres_state & SDHC_PRES_STATE_CDIHB) ||
-			   (((sdhc_regs_t *)base_addr)->pres_state & SDHC_PRES_STATE_CIHB));
-	}
+        while ((((sdhc_regs_t *)base_addr)->pres_state & SDHC_PRES_STATE_CDIHB) ||
+               (((sdhc_regs_t *)base_addr)->pres_state & SDHC_PRES_STATE_CIHB));
+    }
 
-	// Step 1: calculate divisor
-	uint32_t divider = (clk_mode == CLOCK_INITIAL) ? get_clock_divider(base_addr, base_clock, SD_CLOCK_ID)
-										  		   : get_clock_divider(base_addr, base_clock, SD_CLOCK_NORMAL);
+    // Step 1: calculate divisor
+    uint32_t divider = (clk_mode == CLOCK_INITIAL) ? get_clock_divider(base_addr, base_clock, SD_CLOCK_ID)
+                                                   : get_clock_divider(base_addr, base_clock, SD_CLOCK_NORMAL);
 
-	// Step 2: 	Set "Internal Clock Enable" (bit 0) and "SDCLK Frequency
-	// 			Select" (bit 8-15)
-	control = ((sdhc_regs_t *)base_addr)->sys_ctrl;
-	control &= ~0xffe0;	// clear existing divider values
-	control |= SDHC_CLOCK_CONTROL_ICE;
-	control |= divider;
+    // Step 2:  Set "Internal Clock Enable" (bit 0) and "SDCLK Frequency
+    //          Select" (bit 8-15)
+    control = ((sdhc_regs_t *)base_addr)->sys_ctrl;
+    control &= ~0xffe0; // clear existing divider values
+    control |= SDHC_CLOCK_CONTROL_ICE;
+    control |= divider;
     ((sdhc_regs_t *)base_addr)->sys_ctrl = control;
-	while ((((sdhc_regs_t *)base_addr)->pres_state & SDHC_PRES_STATE_CDIHB) ||
-		   (((sdhc_regs_t *)base_addr)->pres_state & SDHC_PRES_STATE_CIHB));
+    while ((((sdhc_regs_t *)base_addr)->pres_state & SDHC_PRES_STATE_CDIHB) ||
+           (((sdhc_regs_t *)base_addr)->pres_state & SDHC_PRES_STATE_CIHB));
 
-	// Step 3: Check until "Internal Clock Stable" (bit 1)
-	while(!(((sdhc_regs_t *)base_addr)->sys_ctrl & SDHC_CLOCK_CONTROL_ICS));
+    // Step 3: Check until "Internal Clock Stable" (bit 1)
+    while(!(((sdhc_regs_t *)base_addr)->sys_ctrl & SDHC_CLOCK_CONTROL_ICS));
 
-	// Step 4: Activate "SD Clock Enable" (bit 2)
-	control = ((sdhc_regs_t *)base_addr)->sys_ctrl;
-	control |= SDHC_CLOCK_CONTROL_SCE;
+    // Step 4: Activate "SD Clock Enable" (bit 2)
+    control = ((sdhc_regs_t *)base_addr)->sys_ctrl;
+    control |= SDHC_CLOCK_CONTROL_SCE;
     ((sdhc_regs_t *)base_addr)->sys_ctrl = control;
-	while ((((sdhc_regs_t *)base_addr)->pres_state & SDHC_PRES_STATE_CDIHB) ||
-		   (((sdhc_regs_t *)base_addr)->pres_state & SDHC_PRES_STATE_CIHB));
+    while ((((sdhc_regs_t *)base_addr)->pres_state & SDHC_PRES_STATE_CDIHB) ||
+           (((sdhc_regs_t *)base_addr)->pres_state & SDHC_PRES_STATE_CIHB));
 
     return 0;
 }
@@ -199,12 +199,12 @@ void sdhc_set_voltage_level(sdhc_dev_t *host)
 
 void sdhc_inter_command_delay(void)
 {
-	// For the RPi3 a delay is necessary, otherwise there will be a CMD/data
-	// transfer error.
-	// ToDo: We still need to figure out the reason why we need a delay here. It
-	// seems to only be the case for the RPi3 and is not required for the other
-	// platforms. The general issue is that this delay is called whenever two
-	// commands are issued. As a result, this will result in a big performance
-	// loss.
-	udelay(1000);
+    // For the RPi3 a delay is necessary, otherwise there will be a CMD/data
+    // transfer error.
+    // ToDo: We still need to figure out the reason why we need a delay here. It
+    // seems to only be the case for the RPi3 and is not required for the other
+    // platforms. The general issue is that this delay is called whenever two
+    // commands are issued. As a result, this will result in a big performance
+    // loss.
+    udelay(1000);
 }
