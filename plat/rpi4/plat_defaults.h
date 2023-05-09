@@ -55,6 +55,7 @@
         dataport  Buf               storage_port; \
         \
         attribute int               peripheral_idx; \
+        attribute int               dma_pool_paddr = 0x30000000; \
     }
 
 
